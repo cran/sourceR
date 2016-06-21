@@ -80,7 +80,7 @@ summary.source_attribution <- function(object, alpha = 0.05, burn_in = 0, thin =
   calc_interval <- create_calc_interval(interval_type)
   
   summary_res <- list()
-  n <- dim(object$posterior$a[[1]][[1]])[1]
+  n <- get_max_iter(object)
 
   sub <- seq(burn_in + 1, n, by = thin)
   
@@ -98,27 +98,29 @@ summary.source_attribution <- function(object, alpha = 0.05, burn_in = 0, thin =
     }
   }
 
-  if ("alpha" %in% names(object$posterior)) {
-    summary_res$alpha <- calc_interval(object$posterior$alpha[sub], alpha)
-    names(summary_res$alpha) <- c("median", "lower", "upper")
-  }
+#   if ("alpha" %in% names(object$posterior)) {
+#     summary_res$alpha <- calc_interval(object$posterior$alpha[sub], alpha)
+#     names(summary_res$alpha) <- c("median", "lower", "upper")
+#   }
   
   if ("d" %in% names(object$posterior)) {
     summary_res$d <- calc_interval(object$posterior$d[sub], alpha)
     names(summary_res$d) <- c("median", "lower", "upper")
   }
   
-  summary_res$a <- list()
-  for (t in 1 : times) {
-    summary_res$a[[t]] <- list()
-    names(summary_res$a)[t] <- names(object$posterior$a)[t]
-    for (l in 1 : locations) {
-      summary_res$a[[t]][[l]] <- matrix(NA, ncol = 3, nrow = sources)
-      names(summary_res$a[[t]])[l] <- names(object$posterior$a[[t]])[l]
-      colnames(summary_res$a[[t]][[l]]) <- c("median", "lower", "upper")
-      rownames(summary_res$a[[t]][[l]]) <- colnames(object$posterior$a[[t]][[l]])
-      for (j in 1 : sources) {
-        summary_res$a[[t]][[l]][j, ] <- calc_interval(object$posterior$a[[t]][[l]][sub, j], alpha)
+  if ("a" %in% names(object$posterior)) {
+    summary_res$a <- list()
+    for (t in 1 : times) {
+      summary_res$a[[t]] <- list()
+      names(summary_res$a)[t] <- names(object$posterior$a)[t]
+      for (l in 1 : locations) {
+        summary_res$a[[t]][[l]] <- matrix(NA, ncol = 3, nrow = sources)
+        names(summary_res$a[[t]])[l] <- names(object$posterior$a[[t]])[l]
+        colnames(summary_res$a[[t]][[l]]) <- c("median", "lower", "upper")
+        rownames(summary_res$a[[t]][[l]]) <- colnames(object$posterior$a[[t]][[l]])
+        for (j in 1 : sources) {
+          summary_res$a[[t]][[l]][j, ] <- calc_interval(object$posterior$a[[t]][[l]][sub, j], alpha)
+        }
       }
     }
   }

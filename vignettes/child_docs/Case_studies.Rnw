@@ -1,0 +1,453 @@
+
+\section{Case Studies}
+
+In this section we demonstrate the use of the \pkg{sourceR} package using two example data sets. The first uses simulated data to demonstrate the general use case, with both time and location extensions for the model. The second is a specific case study using the the data described in the motivation section (Section \ref{sec:motivation}). The results (proportion of cases attributed to each source) are compared to the results from the Dutch, Modified Hald and Island models.
+
+\subsection{Simulated data} \label{sim_study_section}
+
+In this section, we provide a worked example using simulated data with multiple times and locations for source attribution data generated from the model in Section \ref{sec:model} (available in the \pkg{sourceR} data sets). There are two times (1, 2) and two locations (A, B) over which the human cases vary. The data expected by \code{saBayes} is in long format, with a column for the number of human cases, the number of positive samples for each source, and columns identifying the type, time and locations. Note, the source data is the same for all locations within a time. For this data, the source prevalences ($\pi_j$) are all set to be 1. If source prevalences are not provided, \code{saBayes} will automatically set them all to 1 (with a warning). The data must be in long format, with columns giving the number of human cases for each type, a column for each of the sources giving the number of positive samples for each type, and columns giving the time, location and type id's for each observation. 
+
+\begin{table}
+\caption{Minimum parameters required for the \code{saBayes} function.}
+\label{table:HaldModelMinParams}
+\begin{tabular}{p{4cm}p{11cm}}
+\code{formula} & A formula object of the form $y\sim x1 + x2 + ... + xJ$, where $y$ is the name of the human cases column, and $x1, ...,xJ$ are the names of the source count columns in the data.\\
+\code{time} & A formula object of the form $\sim t$, where $t$ is the name of the column containing the times in the data.\\
+\code{location} & A formula object of the form $\sim l$, where $l$ is the name of the column containing the locations in the data.\\
+\code{type} & A formula object of the form $\sim s$, where $s$ is the name of the column containing the (sub) types in the data.\\
+\code{data} & Correctly formatted data.\\
+\code{priors} & List with parameters for the prior distributions for each of the model parameters.\\
+\code{n\_iter} & Specifies the number of iterations to run the algorithm for.\\
+\code{likelihood_dist} & Specifies the likelihood distribution to be used for the human cases from each type. Must be one of \code{nbinom} or \code{pois}.\\
+\end{tabular}
+\end{table}
+
+<<run_doMCMC_sim_pois, results='hide', message=FALSE, eval = FALSE, cache = T>>=
+require(sourceR)
+set.seed(63164)
+data(sim_SA)
+data(sim_SA_true)
+
+# Set priors
+priors <- list(a = 1, r = 1, theta = c(0.01, 0.00001))
+
+# Run model
+res <- saBayes(formula = Human ~ Source1 + Source2 + Source3 + Source4 + Source5, 
+               time = ~Time, location = ~Location, type = ~Type,
+               data = sim_SA$data, priors = priors,
+               alpha_conc = 1, prev = sim_SA$prev,
+               likelihood_dist = "pois", n_iter = 11000,
+               mcmc_params = list(burn_in = 1000, thin = 1))
+@
+
+<<read_doMCMC_sim, results='hide', echo = FALSE, warning=FALSE, message=FALSE, cache = T>>=
+thin = 1 
+require(sourceR)
+set.seed(63164)
+data(sim_SA)
+data(sim_SA_true)
+res <- readRDS(file = "data/data_posteriors/sim_data_mcmc_posterior.rds")
+@
+
+The algorithm is run for 102,000 iterations using the \pkg{sourceR} command, with an initial burn in of 2000 iterations, followed by a further 100,000 iterations, of which every 100\textsuperscript{th} sample is saved. The acceptance rates for all parameters (except those updated using a Gibbs sampler) can be found in a list called \code{acceptance} in the output from \code{saBayes}. Trace and autocorrelation plots for the parameters (Figure~\ref{fig:trace_acf_sim_data_plots}) indicate that the Markov chain is mixing well and has converged, and that thinning by 100 is adequate. The posteriors are returned as nested lists for each parameter. The following R code demonstrates how to access the posteriors for a given source $a_{jtl}$ or type $q_i$ effects and a relative prevalence $r_{ijt}$.
+
+<<trace_acf_sim_data_code, dev='tikz',results='hide', eval=FALSE, cache = T>>=
+## Plot the marginal posterior for the source effect 2, at time 1, location A
+plot(res$posterior$a$time1$locationA[,"Source3"], type="l")
+## Plot the marginal posterior for the type effect 21
+plot(res$posterior$q[,"type21"], type="l")
+## Plot the marginal posterior for the relative prevalence of source effect 5, 
+## type 17, at time 2
+plot(res$posterior$r$time2["type17","Source5",], type="l")
+@
+
+<<trace_acf_sim_data_plots, dev='tikz', fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.lp="fig:", fig.cap = 'Trace and acf plots for a sample of the model parameters. True values of the parameters are shown in red.', fig.width=6.1, fig.height=3, cache = T>>=
+
+library(Matrix)
+library(ggplot2)
+library(gplots)
+library(cluster)
+
+par(mfrow=c(2,5), mai=c(0.45, 0.1, 0, 0.3), mgp=c(2,1,0), oma = c(2, 2, 4, 1), xpd = NA, cex.axis = 0.75, cex.lab = 0.75)
+plot(res$posterior$a$time1$locationA[,"Source3"], type="l", main="", ylab="value", xlab=paste("iteration /", thin)) 
+title(paste("$\\textsf{source effect}$", "\n($\\textsf{source 3, time 1,}$", "\n$\\textsf{location A}$)"), line = 0.5, cex.main = 0.9)
+abline(h = subset(sim_SA_true$a, subset = (Time == 1 & Location == "A" & source_id == "Source3"), select = value), col = "red", xpd = FALSE)
+
+plot(res$posterior$q[,"type21"], type="l", main="", ylab="value", xlab=paste("iteration /", thin))
+title(paste("$\\textsf{type effect}$", "\n$\\textsf{type 21}$"), line = 0.5, cex.main = 0.9)
+abline(h = subset(sim_SA_true$q, subset = (Type == "21"), select = value), col = "red", xpd = FALSE)
+
+plot(res$posterior$r$time2["type17","Source5",], type="l", main="", ylab="value", xlab=paste("iteration /", thin))
+title(paste("$\\textsf{r}$", "\n($\\textsf{source 5, type 17,}$", "\n$\\textsf{time 1, location A}$)"), line = 0.5, cex.main = 0.9)
+rij_det <- sapply(res$data_nested$sources, function(x) {apply(x, 2, function(y) {y/sum(y)})}, simplify=F)
+abline(h = rij_det[[2]][17, 5], col = "red", xpd = FALSE)
+
+plot(res$posterior$lj$time1$locationA[,"Source1"], type="l", main="", ylab= "value", xlab=paste("iteration /", thin))
+title(paste("$\\lambda$", "\n($\\textsf{source 1, time 1}$", "\n$\\textsf{location A})$"), line = 0.5, cex.main = 0.9)
+abline(h = subset(sim_SA_true$lambda_j, subset = (Time == 1 & Location == "A" & source_id == "Source1"), select = value), col = "red", xpd = FALSE)
+
+plot(res$posterior$li$time2$locationB[,"type10"], type="l", main="", ylab="value", xlab=paste("iteration /", thin))
+title(paste("$\\lambda$", "\n($\\textsf{type 10, time 2}$", "\n$\\textsf{location B}$)"), line = 0.5, cex.main = 0.9)
+abline(h = subset(sim_SA_true$lambda_i, subset = (Time == 2 & Location == "B" & Type == "10"), select = value), col = "red", xpd = FALSE)
+
+par(xpd = FALSE)
+acf(res$posterior$a$time1$locationA[,"Source3"], lag.max=100, main="")
+acf(res$posterior$q[,"type21"], lag.max=100, main="")
+acf(res$posterior$r$time2["type17","Source5",], lag.max=100, main="")
+acf(res$posterior$lj$time1$locationA[,"Source1"], lag.max=100, main="")
+acf(res$posterior$li$time1$locationA[,"type4"], lag.max=100, main="")
+@
+
+Medians and Chen-Shao highest posterior density credible intervals \citep{ChenShao99} can be obtained for each parameter using the \code{summary} command. 
+%The credible intervals are Chen-Shao highest posterior density intervals which are the shortest possible Bayesian credible intervals, though 
+%they can have high Monte Carlo error when  estimated directly from simulations via empirical shortest intervals \citep{LiuGelZhe15}. 
+
+<<summary_sim_pois, results='hide', cache = T>>=
+summary(res, alpha = 0.05, thin = 1, burn_in = 0)
+@
+
+The data can be subsetted using the \code{subset_posterior} command.
+
+<<subset_sim_pois, results='hide', cache = T>>=
+subset_posterior(res, params = c("a", "li", "q"), 
+                 t = "1", l = "B", j = c("Source2", "Source1"), 
+                 i = c("47", "10"), iters = c(3:10))
+@
+
+Both the full posterior and a subset of the posterior (generated using \code{subset_posterior}) can be flattened into a data frame.
+
+<<flatten_sim_pois, results='hide', cache = T>>=
+flatten(res)
+@
+
+The marginal density plots of the proportion of cases attributed to each source at each time and location ($\lambda_{jtl}$) show that the true values (shown by a cross on the graph) are within the 
+credible intervals (Figure~\ref{fig:sim_pois_lambdaj_plots}). The residual plots for $\lambda_{i}$ (Figure~
+\ref{fig:lambda_i_residuals}) show that the model is fitting well. The heatmap shows the grouping of the type effects (Figure~\ref{fig:type_effect_heatmap}) computed using a dissimilarity matrix from the clustering output of the mcmc. The coloured bar under the dendrogram gives the correct grouping from the simulated data. This shows that 
+all the types have been grouped correctly if the dendrogram is cut at the true number of groups (5).
+
+<<sim_pois_lambdaj_plots, dev='tikz', fig.height=4.5, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.lp="fig:", fig.cap = 'Proportion of cases attributable to each source for each time (1, 2) and location (A, B) for simulated Poisson data. Error bars represent 95\\% credible intervals. True $\\lambda_j$ values are shown as crosses.', cache = T>>=
+summary_lj <- summary(res, burn_in = 0, thin = 1)$lj_proportion # removing the burn in and thinning has already been done
+
+medians <- rbind(summary_lj$time1$locationA[,"median"], summary_lj$time1$locationB[,"median"],
+                 summary_lj$time2$locationA[,"median"], summary_lj$time2$locationB[,"median"])
+lowers <- rbind(summary_lj$time1$locationA[,"lower"], summary_lj$time1$locationB[,"lower"],
+                 summary_lj$time2$locationA[,"lower"], summary_lj$time2$locationB[,"lower"])
+uppers <- rbind(summary_lj$time1$locationA[,"upper"], summary_lj$time1$locationB[,"upper"],
+                 summary_lj$time2$locationA[,"upper"], summary_lj$time2$locationB[,"upper"])
+
+true_lambda_i_t1lA <- subset(sim_SA_true$lambda_j, 
+                             subset = (Time == "1" & Location == "A"))$value
+true_lambda_i_t1lB <- subset(sim_SA_true$lambda_j, 
+                             subset = (Time == "1" & Location == "B"))$value
+true_lambda_i_t2lA <- subset(sim_SA_true$lambda_j, 
+                             subset = (Time == "2" & Location == "A"))$value
+true_lambda_i_t2lB <- subset(sim_SA_true$lambda_j, 
+                             subset = (Time == "2" & Location == "B"))$value
+
+trues <- rbind(true_lambda_i_t1lA / sum(true_lambda_i_t1lA),
+               true_lambda_i_t1lB / sum(true_lambda_i_t1lB),
+               true_lambda_i_t2lA / sum(true_lambda_i_t2lA),
+               true_lambda_i_t2lB / sum(true_lambda_i_t2lB))
+
+cols <- c("2","3","4","5","6")
+mp <- barplot(medians, ylab="Proportion of cases attributed", ylim=c(0, 0.6),
+              names=paste("Source", c(1:5)), beside=TRUE, cex.lab=1,
+              cex.names=0.9, cex.axis=0.85, col=rbind(cols,cols,cols,cols), mgp=c(3,2,0))
+# mp is the midpoints (on the x axis) of the bars.
+for (j in 1 : 5) {
+  segments(mp[,j],lowers[,j],mp[,j],uppers[,j]) # add line segments for credible intervals
+  points(mp[,j], trues[,j], pch=4) # add crosses for true values
+}
+
+for(k in 1 : 5) # add text to each bar showing which time and location it refers to
+{
+  mtext("1A",1,line=0,at=mp[1,k],cex=0.8) # time 1, location 1
+  mtext("1B",1,line=0,at=mp[2,k],cex=0.8) # time 1, location 2
+  mtext("2A",1,line=0,at=mp[3,k],cex=0.8) # time 2, location 1
+  mtext("2B",1,line=0,at=mp[4,k],cex=0.8) # time 2, location 2
+}
+@
+
+
+<<lambda_i_residuals, fig.height=3.5, fig.width=5, dev='tikz', fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.lp="fig:", fig.cap = 'Residual plots', cache = T>>=
+summary_li <- summary(res, alpha = 0.05, burn_in = 0, thin = 1)$li
+median_li <- c(summary_li$time1$locationA[,"median"], 
+               summary_li$time1$locationB[,"median"],
+               summary_li$time2$locationA[,"median"],
+               summary_li$time2$locationB[,"median"])
+
+plot(median_li, human_cases <- unlist(res$data_nested$humans), #sim_SA$data[,"Human"], 
+     main="$\\lambda_{i}$ vs human cases",
+     xlab="$\\lambda_{i}$", ylab="human cases")
+abline(0,1)
+@
+
+
+<<type_effect_heatmap, dev='tikz', fig.align='center', results='hide', warning=FALSE, message=FALSE, echo=FALSE, fig.lp="fig:", fig.cap = 'Heatmap showing the grouping of the type effects (q)', cache = T>>=
+  groups <- as.data.frame(t(res$posterior$cluster))
+  groups <- as.data.frame(apply(groups, 2, function(x) as.factor(x)))
+  rownames(groups) <- 1 : 50
+
+  # compute dissimilarity matrix for the type effect clusters
+  disim_clust_g <- daisy(groups)
+  clu <- hclust(disim_clust_g, method="complete")
+  dend <- as.dendrogram(clu)
+
+  # OPTIONAL: change the colour of the heatmap. The lighter the colour,
+  # the less likely two type effects are in the same group
+  hmcols <- colorRampPalette(c("blue","white"))(299)
+  # OPTIONAL: change the layout of the heatmap and dendrogram
+# 4 is dendrogram
+# 1 is colour group
+# 2 is heatmap
+# 5 is colour key
+# 3 no idea..!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  lmat <- rbind(c(0,4),c(0,1),c(3,2),c(5,5))
+  lwid <- c(0.1,4)
+  lhei <- c(1,0.1,4,1)
+  layout(mat=lmat, widths=lwid, heights=lhei)
+
+  heatmap_data <- as.matrix(disim_clust_g)
+
+  rownames(heatmap_data) <- unlist(regmatches(colnames(res$posterior$q), gregexpr('\\(?[0-9,.]+', colnames(res$posterior$q)))) ## only works because type names are all numbers
+  colnames(heatmap_data) <- rownames(heatmap_data)
+
+  group <- factor(sim_SA_true$q$value)
+  levels(group) <- 1 : length(unique(sim_SA_true$q$value))
+  group <- as.numeric(group)
+  cols <- c("green", "purple", "yellow", "red", "blue")
+for (g in 1 : 5) {
+  group[which(group == as.character(g))] <- cols[g]
+}
+  heatmap.2(heatmap_data,
+            density.info="none",  # turns off density plot inside color legend
+            trace="none",         # turns off trace lines inside the heat map
+            col=hmcols,           # use on color palette defined earlier
+            dendrogram="col",     # only draw a row dendrogram
+            Colv=dend,
+            Rowv=dend,
+            symm=TRUE,
+            lmat=lmat, lwid=lwid, lhei=lhei,
+            ColSideColors=group
+  )
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Campylobacteriosis cases in the Manawatu (2005-2008)} \label{real_data_case_study_section}
+
+In this section, we apply \pkg{sourceR} to the \code{campy} (campylobacteriosis) dataset from Manawatu, New Zealand, described in Section \ref{sec:motivation}.  We compare the results of our Bayesian non-parametric approach with results from the Modified Hald and Island models. Types which do not have any source cases need to be removed from the data set before running the analysis because there is no information to attribute human cases to a source if the subtype only occurs in humans.
+
+<<run_doMCMC_real, results='hide', eval = FALSE, message=FALSE, cache = T>>=
+data(campy)
+set.seed(59623)
+# remove rows with no source cases as there is no information for
+# source attribution of human cases for these sources
+zero_rows <- which(apply(campy[,c(2 : 7)], 1, sum) == 0)
+campy <- campy[-zero_rows,]
+
+# Set priors
+priors <- list(a = 1, r = 1, theta = c(0.01, 0.00001))
+
+# set prevalences
+# Number of samples  tested  for c. jejuni, for each source.
+tot_samples<-c(239, 196, 127, 595, 552, 192 + 332)
+# Number of samples positive for c. jejuni, for each source.
+pos_samples<-c(181, 113, 109, 97, 165, 24 + 62)   
+prevs <- data.frame(value = pos_samples / tot_samples, 
+                    source_id = colnames(campy[, 2:7]))
+
+# Run model
+# the model assumes one time and location if none are specified in saBayes
+res <- saBayes(formula = Human ~ ChickenA + ChickenB + ChickenC + 
+                 Bovine + Ovine + Environment, 
+               type = ~Type, data = campy, priors = priors, alpha_conc = 1, 
+               prev = prevs, likelihood_dist = "pois", n_iter = 12000,
+               mcmc_params = list(burn_in = 2000, thin = 1))
+@
+
+<<read_doMCMC_real, results='hide', echo = FALSE, warning=FALSE, message=FALSE, cache = T>>=
+thin = 1
+data(campy)
+set.seed(59623)
+zero_rows <- which(apply(campy[,c(2 : 7)], 1, sum) == 0)
+campy <- campy[-zero_rows,]
+res <- readRDS(file = "data/data_posteriors/real_data_mcmc_posterior.rds")
+@
+
+Trace and autocorrelation plots for the parameters indicate that the Markov chain is mixing well and has converged, and that thinning by 500 is adequate for most of the parameters (Figure~
+\ref{fig:trace_params_real}). The residual plots for the $\lambda_{i}$s (Figure~\ref{fig:lambda_i_residuals_real}) show that the model is fitting the data well. The proportion of cases attributed to each source ($\lambda_j$) using the new model can be compared to the previous models (Figure~\ref{fig:lambda_j_real}). The new 
+model has very similar medians to the modified Hald and Island models. The credible intervals are much narrower than the modified Hald model, but still relatively wide compared to the Island model.
+The heatmap and dendrogram of the type effects (Figure~
+\ref{fig:type_effect_heatmap_real}) shows that there are 3 main groups of type effects. The violin plots (Figure~\ref{fig:type_effect_violinplots_real}) show that the largest group of types have very small type effects. These correspond to types that are observed in source samples, but no human cases. There is a group of 5 types which have very large type effects (including type 474 which is endemic to NZ and largely associated 
+with poultry). Although the clustering was determined without reference to genetic relatedness of the types, three members of this group (subtypes 38, 48 and 474) are members of the same clonal complex (CC48) and therefore genetically closely related \citep{pubmlstCampy}. Subtype 52 was frequently placed in both the groups with the largest and middling type effects (as can be seen in Figure\ref{fig:type_effect_heatmap_real}, although overall it was attributed to the group with the largest type effects.
+
+<<trace_params_real, dev='tikz', fig.align='center', echo = FALSE, warning=FALSE, message=FALSE, fig.lp="fig:", fig.cap = 'Trace and acf plots for a sample of the model parameters (real data).', fig.width=6.1, fig.height=3, cache = T>>=
+
+# saveRDS(res, file = "/home/millerp/Documents/PhD Project/Source_Attribution/saJSSPaper/Data/data_posteriors/real_data_mcmc_posterior.rds")
+
+par(mfrow=c(2,5), mai=c(0.45, 0.1, 0, 0.3), mgp=c(2,1,0), oma = c(2, 2, 4, 1), xpd = NA, cex.axis = 0.75, cex.lab = 0.75)
+plot(res$posterior$a$time1$locationA[,"ChickenC"], type="l", main="",
+     ylab="value", xlab=paste("iteration /", thin))
+title(paste("$\\textsf{source effect}$", "\n($\\textsf{Chicken C}$)"), line = 0.5, cex.main = 0.9)
+plot(res$posterior$q[,"type25"], type="l", main="",
+     ylab="value", xlab=paste("iteration /", thin))
+title(paste("$\\textsf{type effect}$", "\n($\\textsf{type 25}$)"), line = 0.5, cex.main = 0.9)
+plot(res$posterior$r$time1["type354","Ovine",], type="l", main="",
+     ylab="value", xlab=paste("iteration /", thin))
+title(paste("$\\textsf{r}$", "\n($\\textsf{Ovine, type 354}$)"), line = 0.5, cex.main = 0.9)
+plot(res$posterior$lj$time1$locationA[,"ChickenB"], type="l", main="",
+     ylab= "value", xlab=paste("iteration /", thin))
+title(paste("$\\lambda$", "\n($\\textsf{Chicken B})$"), line = 0.5, cex.main = 0.9)
+plot(res$posterior$li$time1$locationA[,"type42"], type="l", main="",
+     ylab="value", xlab=paste("iteration /", thin))
+title(paste("$\\lambda$", "\n($\\textsf{type 42})$"), line = 0.5, cex.main = 0.9)
+
+par(xpd = FALSE)
+acf(res$posterior$a$time1$locationA[,"ChickenC"], lag.max=100, main="")
+acf(res$posterior$q[,"type25"], lag.max=100, main="")
+acf(res$posterior$r$time1["type354","Ovine",], lag.max=100, main="")
+acf(res$posterior$lj$time1$locationA[,"ChickenB"], lag.max=100, main="")
+acf(res$posterior$li$time1$locationA[,"type42"], lag.max=100, main="")
+
+@
+
+<<lambda_j_real, fig.lp="fig:", fig.cap = 'Proportion of human campylobacteriosis cases attributable to each source. Error bars represent 95\\% confidence or credible intervals.', fig.align='center', echo=FALSE, cache = T>>=
+# existing results from previous models
+lambda_j_CI <- data.frame(Source=c("Poultry_A","Poultry_B","Poultry_C","Bovine","Ovine","Environmnent"),
+                           Dutch=c(0.34,0.14,0.1,0.19,0.11,0.12),
+                           Lower=c(0.28,0.11,0.07,0.14,0.09,0.06),
+                           Upper=c(0.41,0.18,0.14,0.23,0.14,0.18),
+                           Danish=c(0.58,0.09,0.07,0.11,0.1,0.01),
+                           DLower=c(0.25,0.01,0,0,0.01,0),
+                           DUpper=c(0.78,0.26,0.24,0.39,0.28,0.06),
+                           Island=c(0.64,0.08,0.04,0.18,0.03,0.017),
+                           DULower=c(0.56,0.02,0.002,0.1,0.002,0.001),
+                           DUUpper=c(0.73,0.14,0.08,0.26,0.11,0.043))
+
+# new model results
+lj <- summary(res, burn_in=0, thin=1, alpha=0.05)$lj_proportion$time1$locationA[c(2,3,4,1,6,5),]
+lambda_j_CI$newModel <- lj[,"median"]
+lambda_j_CI$newModelUpper <- lj[,"upper"]
+lambda_j_CI$newModelLower <- lj[,"lower"]
+
+d <- rbind(lambda_j_CI$Dutch,lambda_j_CI$Danish, lambda_j_CI$Island, lambda_j_CI$newModel)
+cis <- rbind(lambda_j_CI$Lower, lambda_j_CI$Upper,
+           lambda_j_CI$DLower, lambda_j_CI$DUpper,
+           lambda_j_CI$DULower, lambda_j_CI$DUUpper,
+           lambda_j_CI$newModelLower, lambda_j_CI$newModelUpper)
+
+cols<-c("#FFFF00FF", "#FFaF00FF", "#FF7F00FF", "#FF0000FF", "#0000FFFF", "#00FF00FF")
+mp <- barplot(d, ylab="Proportion of cases attributed", ylim=c(0, 1), names=c("Poultry\nSupplier A", "Poultry\nSupplier B", "Poultry\nSupplier C", "Bovine\n", "Ovine\n", "Environment\n"), beside=TRUE, cex.lab=1, cex.names=0.9, cex.axis=0.85,col=rbind(cols,cols,cols,cols), mgp=c(3,2,0))
+
+# mp is the midpoints (on the x axis) of the bars.
+segments(mp[1,],cis[1,],mp[1,],cis[2,])
+segments(mp[2,],cis[3,],mp[2,],cis[4,])
+segments(mp[3,],cis[5,],mp[3,],cis[6,])
+segments(mp[4,],cis[7,],mp[4,],cis[8,])
+for(k in 1:6)
+{
+  mtext("I",1,line=0,at=mp[1,k],cex=0.8)
+  mtext("II",1,line=0,at=mp[2,k],cex=0.8)
+  mtext("III",1,line=0,at=mp[3,k],cex=0.8)
+  mtext("IV",1,line=0,at=mp[4,k],cex=0.8)
+}
+legend("topright", legend=c("I    Dutch Model", "II   Modified Hald Model", "III  Asymmetric island model", "IV  New model"), pch=NULL, lty=1)
+@
+
+<<lambda_i_residuals_real, fig.height=3.5, fig.width=5, dev='tikz', fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.lp="fig:", fig.cap = 'Residual plot', cache = T>>=
+summary_li <- summary(res, alpha=0.05, burn_in=0, thin=1)$li
+median_li <- c(summary_li$time1$locationA[,"median"])
+human_cases <- unlist(res$data_nested$humans)
+plot(median_li, human_cases, 
+     main="$\\lambda_{i}$ vs human cases",
+     xlab="$\\lambda_{i}$", ylab="human cases")
+abline(0,1)
+@
+
+<<type_effect_heatmap_real, dev='tikz', fig.align='center', results='hide', warning=FALSE, message=FALSE, echo=FALSE, fig.lp="fig:", fig.cap = 'Heatmap showing the grouping of the type effects (q)', fig.width=6.1, fig.height=8.9, cache = T>>=
+
+lmat = rbind(c(0,3),c(2,1),c(0,4))
+lwid = c(0.1,6)
+lhei = c(1.5,7,0.4)
+
+groups <- as.data.frame(t(res$posterior$cluster[,]))
+groups <- as.data.frame(apply(groups, 2, function(x) as.factor(x)))
+rownames(groups) <- rownames(campy)[order(rownames(campy))]
+disim_clust_g <- daisy(groups)
+clu <- hclust(disim_clust_g, method="complete")
+dend <- as.dendrogram(clu)
+hmcols<- colorRampPalette(c("blue","white"))(299)
+gnames <- "heatplot_groups"
+
+heatmap.2(as.matrix(disim_clust_g),
+          density.info="none",  # turns off density plot inside color legend
+          trace="none",         # turns off trace lines inside the heat map
+          col=hmcols,           # use on color palette defined earlier
+          dendrogram="col",     # only draw a row dendrogram
+          Colv=dend,
+          Rowv=dend,
+          cexRow=0.75,
+          symm=TRUE,
+          labCol=NA,
+          lmat=lmat, lwid=lwid, lhei=lhei)
+@
+
+
+<<type_effect_boxplots_real1, dev='tikz', fig.align='center', external = TRUE, results='hide', warning=FALSE, echo=FALSE, message=FALSE, fig.lp="fig:", fig.cap = 'Box plots of the type effects (q)', fig.width=6.1, fig.height=8, cache = T>>=
+
+q_full2 <- data.frame(value = c(as.vector(res$posterior$q)),
+                      i = as.factor(rep(unlist(regmatches(colnames(res$posterior$q), gregexpr('\\(?[0-9,.]+', colnames(res$posterior$q)))) # strips off type word from type names. Only works because type names are all numeric
+                                        , each = dim(res$posterior$q)[1])),
+                      group = as.factor(rep(cutree(clu, 3), each = dim(res$posterior$q)[1])))
+q_full2$type <- factor(q_full2$i, levels = labels(as.dendrogram(clu)))
+
+q_full_subset <- q_full2[which(q_full2$group == "1"), ]
+
+p1 <- ggplot(q_full_subset, aes(x=type,y=value))+geom_violin(scale = "width", fill='darkgrey', color="darkgrey")+theme_classic()+ 
+    theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 7),
+    axis.text.y = element_text(size = 10),
+    axis.title.x = element_text(size = 10),
+    axis.title.y = element_text(size = 10, angle = 90),
+    axis.line = element_line(size = 0.75)
+  ) +
+  scale_y_log10(
+   breaks = c(0.000000001,0.00000001,0.0000001,0.000001,0.00001,0.0001,0.001,0.01,0.1,1, 10, 100, 1000, 10000),
+   labels = scales::trans_format("log10", scales::math_format(10^.x))) +
+  labs(x = "Type ID",
+       y = "Value")
+
+q_full_subset <- q_full2[which(q_full2$group != "1"), ]
+
+p2 <- ggplot(q_full_subset, aes(x = type, y = value)) + 
+  geom_violin(scale = "width", fill = 'darkgrey', color = "darkgrey") +
+  theme_classic() + 
+     theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 7),
+    axis.text.y = element_text(size = 10),
+    axis.title.x = element_text(size = 10),
+    axis.title.y = element_text(size = 10, angle = 90),
+    axis.line = element_line(size = 0.75)
+  ) +
+  labs(x = "Type ID",
+       y = "Value")
+
+lay_out = function(...) {    
+    x <- list(...)
+    n <- max(sapply(x, function(x) max(x[[2]])))
+    p <- max(sapply(x, function(x) max(x[[3]])))
+    grid::pushViewport(grid::viewport(layout = grid::grid.layout(n, p)))    
+
+    for (i in seq_len(length(x))) {
+        print(x[[i]][[1]], vp = grid::viewport(layout.pos.row = x[[i]][[2]], 
+            layout.pos.col = x[[i]][[3]]))
+    }
+} 
+lay_out(list(p1, 1, 1),
+       list(p2, 2 : 3, 1))
+
+@
+

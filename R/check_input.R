@@ -6,10 +6,16 @@ is.wholenumber <- function(x, tol = .Machine$double.eps^0.5)  abs(x - round(x)) 
 check_mcmc_params <- function(mcmc_params, num) {
   if (!is.list(mcmc_params)) stop("mcmc_params must be a list.")
   ## save_lambda
-  if (!"save_lambda" %in% names(mcmc_params)) {
-    mcmc_params$save_lambda <- TRUE
+  if (!"save_params" %in% names(mcmc_params)) {
+    mcmc_params$save_params <- c("a", "q", "r", "li", "lj", "cluster", "theta", "d")
   } else {
-    if (!is.logical(mcmc_params$save_lambda)) stop("mcmc_params$save_lambda must be TRUE or FALSE.")
+    if (!is.atomic(mcmc_params$save_params)) stop("mcmc_params$save_lambda must be a vector.")
+    all_vals <- c("a", "q", "r", "li", "lj", "cluster", "theta", "d")
+    save_trues <- sapply(all_vals, function(x) is.element(x, mcmc_params$save_params))
+    if (length(mcmc_params$save_params) != sum(save_trues)) stop("mcmc_params$save_lambda must only contain the values \"a\", \"q\", \"r\", \"li\", \"lj\", \"cluster\", \"theta\", \"d\" (or a subset of these values).")
+    if (length(mcmc_params$save_params) == 0) {
+      warning("You have chosen not to record the values of any of the parameters.")
+    }
   }
   ## burn_in
   if (!"burn_in" %in% names(mcmc_params)) {
@@ -115,7 +121,7 @@ check_and_process_data <- function(formula, type, time, location, data) {
   
   time_ids <- paste(gtools::mixedsort(unique(data$time)))
   location_ids <- paste(gtools::mixedsort(unique(data$location)))
-  type_ids <- paste(gtools::mixedsort(unique(data$type)))
+  type_ids <- paste("type", paste(gtools::mixedsort(unique(data$type))), sep = "")
   
   num$no_L <- length(unique(data$location))
   num$no_T <- length(unique(data$time))
@@ -128,7 +134,7 @@ check_and_process_data <- function(formula, type, time, location, data) {
   data <- data[with(data, order(time, location, type)), ]
   time_ids <- unique(data$time)
   location_ids <- unique(data$location)
-  
+
   source_data <- list()
   human_data <- list()
   r <- list()
@@ -137,7 +143,6 @@ check_and_process_data <- function(formula, type, time, location, data) {
     for (l in 1 : num$no_L) {
       if (l != num$no_L) {
         ## check the source data is the same for each location within each time
-        source_sub <- list()
         for (l1 in (l + 1) : num$no_L) {
           source_sub1 <- subset(data, subset = (time == time_ids[t] & location == location_ids[l]), select = c(-human, -time, -location))
           source_sub1 <- source_sub1[as.factor(type_ids), ]
@@ -148,7 +153,7 @@ check_and_process_data <- function(formula, type, time, location, data) {
         }
       }
       human_data[[t]][[l]] <- subset(data, subset = (time == time_ids[t] & location == location_ids[l]), select = c(human))
-      rownames(human_data[[t]][[l]]) <- c(as.character(subset(data, subset = (time == time_ids[t] & location == location_ids[l]), select = c(type))$type))
+      rownames(human_data[[t]][[l]]) <- paste("type", c(as.character(subset(data, subset = (time == time_ids[t] & location == location_ids[l]), select = c(type))$type)), sep = "")
       human_data[[t]][[l]]$human <- human_data[[t]][[l]][type_ids, "human"] # order rows and cols so that they are in alphabetical order
       
       names(human_data[[t]])[l] <- paste("location", location_ids[l], sep = "")
@@ -156,17 +161,18 @@ check_and_process_data <- function(formula, type, time, location, data) {
     }
     
     source_data[[t]] <- subset(data, subset = (time == time_ids[t] & location == location_ids[1]), select = c(-human, -time, -location, -type))
-    rownames(source_data[[t]]) <- c(as.character(subset(data, subset = (time == time_ids[t] & location == location_ids[1]), select = c(type))$type))
+    rownames(source_data[[t]]) <- paste("type", c(as.character(subset(data, subset = (time == time_ids[t] & location == location_ids[1]), select = c(type))$type)), sep = "")
     source_data[[t]] <- source_data[[t]][type_ids, source_ids] # order rows and cols so that they are in alphabetical order
-    
+  
     names(source_data)[t] <- paste("time", time_ids[t], sep = "")
     if (dim(source_data[[t]])[1] != num$no_I) stop("Some data is missing.") 
     else {
-      source_data_no0 <- apply(source_data[[t]], c(1,2), function(ax) {if (ax == 0) 
-        ax = 0.000001
-      else 
-        ax = ax
-      return (ax)})
+      source_data_no0 <- apply(source_data[[t]], c(1,2), function(ax) {
+        if (ax == 0) 
+          ax = 0.000001
+        else 
+          ax = ax
+        return (ax)})
       
       r[[t]] <- apply(source_data_no0, 2, function(x) x / sum(x))
       names(r)[t] <- paste("time", time_ids[t], sep = "")
@@ -483,69 +489,103 @@ create_posterior <- function(num, likelihood_dist, params_fix, mcmc_params, data
   save_i <- seq(mcmc_params$burn_in + 1, n_iter, by = mcmc_params$thin)
   n_iter_thinned <- length(save_i)
   n_iter <- max(save_i)
-  iter_val <- 1
   
   params_cur <- initials
   params_can <- initials
   
-  if (params_fix$r == FALSE) posterior$r <- list()
+  if (params_fix$r == FALSE && is.element("r", mcmc_params$save_params)) posterior$r <- list()
   if (likelihood_dist == "pois") {
-    posterior$q <- matrix(NA, nrow = n_iter_thinned, ncol = num$no_I) 
-    colnames(posterior$q) <- data_names$type_ids #paste("type", data_names$type_ids, sep = "")
-    posterior$cluster <- matrix(NA, nrow = n_iter_thinned, ncol = num$no_I)
-    posterior$theta <- matrix(NA, nrow = n_iter_thinned, ncol = num$no_I)
+    if (is.element("q", mcmc_params$save_params)) {
+      posterior$q <- matrix(NA, nrow = n_iter_thinned, ncol = num$no_I) 
+      colnames(posterior$q) <- data_names$type_ids 
+    }
+    if (is.element("cluster", mcmc_params$save_params)) {
+      posterior$cluster <- matrix(NA, nrow = n_iter_thinned, ncol = num$no_I)
+      colnames(posterior$cluster) <- data_names$type_ids 
+    }
+    if (is.element("theta", mcmc_params$save_params)) {
+      posterior$theta <- matrix(NA, nrow = n_iter_thinned, ncol = num$no_I)
+    }
   } else {
-    posterior$q <- matrix(NA, nrow = n_iter_thinned, ncol = 1) 
-    colnames(posterior$q) <- "overall_mean"
+    if (is.element("q", mcmc_params$save_params)) {
+      posterior$q <- matrix(NA, nrow = n_iter_thinned, ncol = 1) 
+      colnames(posterior$q) <- "overall_mean"
+    }
   }
 
   if (likelihood_dist == "nbinom") {
-    posterior$d <- rep(NA, n_iter)
-    posterior$d[1] <- initials$d
-  } 
-  if (mcmc_params$save_lambda == T) {
-    posterior$li <- list()
-    posterior$lj <- list()
-  }
-  
-  posterior$a <- list()
-  for (t in 1 : num$no_T) {
-    posterior$a[[t]] <- list()
-    if (mcmc_params$save_lambda == T) {
-      posterior$li[[t]] <- list()
-      posterior$lj[[t]] <- list()
+    if (is.element("d", mcmc_params$save_params)) {
+      posterior$d <- rep(NA, n_iter)
+      posterior$d[1] <- initials$d
     }
-    if (params_fix$r == F) {
+  } 
+  if (is.element("li", mcmc_params$save_params)) {
+    posterior$li <- list()
+  }
+  if (is.element("lj", mcmc_params$save_params)) {
+    posterior$li <- list()
+  }
+
+  if (is.element("a", mcmc_params$save_params)) {
+    posterior$a <- list()
+  }
+
+  for (t in 1 : num$no_T) {
+    if (is.element("a", mcmc_params$save_params)) {
+      posterior$a[[t]] <- list()
+    }
+      if (is.element("li", mcmc_params$save_params)) {
+        posterior$li[[t]] <- list()
+      }
+      if (is.element("lj", mcmc_params$save_params)) {
+        posterior$lj[[t]] <- list()
+      }
+    if (params_fix$r == F && is.element("r", mcmc_params$save_params)) {
       posterior$r[[t]] <- array(NA, dim = c(num$no_I, num$no_J, n_iter_thinned))
       dimnames(posterior$r[[t]]) <- list(data_names$type_ids, data_names$source_ids, 1 : n_iter_thinned)
       posterior$r[[t]][, , 1] <- params_cur$r[[t]]
     }
     for (l in 1 : num$no_L) {
-      posterior$a[[t]][[l]] <- matrix(NA, nrow = n_iter_thinned, ncol = num$no_J)
-      colnames(posterior$a[[t]][[l]]) <- data_names$source_ids
-      posterior$a[[t]][[l]][1, ] <- params_cur$a[[t]][[l]]
-      if (mcmc_params$save_lambda == T) {
+      if (is.element("a", mcmc_params$save_params)) {
+        posterior$a[[t]][[l]] <- matrix(NA, nrow = n_iter_thinned, ncol = num$no_J)
+        colnames(posterior$a[[t]][[l]]) <- data_names$source_ids
+        posterior$a[[t]][[l]][1, ] <- params_cur$a[[t]][[l]]
+      }
+      
+      if (is.element("li", mcmc_params$save_params)) {
         posterior$li[[t]][[l]] <- matrix(NA, nrow = n_iter_thinned, ncol = num$no_I)
-        colnames(posterior$li[[t]][[l]]) <- data_names$type_ids #paste("type", data_names$type_ids, sep = "")
+        colnames(posterior$li[[t]][[l]]) <- data_names$type_ids
+      }
+      if (is.element("lj", mcmc_params$save_params)) {
         posterior$lj[[t]][[l]] <- matrix(NA, nrow = n_iter_thinned, ncol = num$no_J)
         colnames(posterior$lj[[t]][[l]]) <- data_names$source_ids
       }
     }
   }
 
-  if (params_fix$r == FALSE) {
+  if (params_fix$r == FALSE && is.element("r", mcmc_params$save_params)) {
     names(posterior$r) <- paste("time", data_names$time_ids, sep = "")
   }
-  if (mcmc_params$save_lambda == TRUE) {
+  if (is.element("li", mcmc_params$save_params)) {
     names(posterior$li) <- paste("time", data_names$time_ids, sep = "")
+  }
+  if (is.element("lj", mcmc_params$save_params)) {
     names(posterior$lj) <- paste("time", data_names$time_ids, sep = "")
   }
-  names(posterior$a) <- paste("time", data_names$time_ids, sep = "")
+
+  if (is.element("a", mcmc_params$save_params)) {
+    names(posterior$a) <- paste("time", data_names$time_ids, sep = "")
+  }
   
   for (t in 1 : num$no_T) {
-    names(posterior$a[[t]]) <- paste("location", data_names$location_ids, sep = "")
-    if (mcmc_params$save_lambda == TRUE) {
+    if (is.element("a", mcmc_params$save_params)) {
+      names(posterior$a[[t]]) <- paste("location", data_names$location_ids, sep = "")
+    }
+    
+    if (is.element("li", mcmc_params$save_params)) {
       names(posterior$li[[t]]) <- paste("location", data_names$location_ids, sep = "")
+    }
+    if (is.element("lj", mcmc_params$save_params)) {
       names(posterior$lj[[t]]) <- paste("location", data_names$location_ids, sep = "")
     }
   }

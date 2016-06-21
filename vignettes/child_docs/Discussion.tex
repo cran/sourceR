@@ -1,0 +1,110 @@
+\section{Discussion} \label{discussion_section}
+
+The \pkg{sourceR} package is the first implementation of a source attribution model in standard statistical software that is easily accessible and intended for use by epidemiologists. The simulation and case studies illustrate how the 
+\pkg{sourceR} package might be used in practice to identify important sources of infection. The new model is widely applicable, fully joint, and does not require approximations or a large number of 
+assumptions. Mixing and aposteriori correlations are significantly decreased in comparison to the Modified Hald model. Furthermore, it can identify clusters of bacterial sub types with similar 
+virulence, pathogenicity and survivability. 
+
+\subsection{Clustering of the type effects}
+The clustering has significantly reduced the effective number of parameters in the model. The dendrogram and heatmap indicate that there are three main groups identified by the model. It is more 
+difficult to estimate the type effect if there are very few positive source samples for that type because large changes in the type effect may not result in much change to the estimated number of 
+human cases. In the \emph{Campylobacter} data set \citep{MulJonNob09}, there is very little information about the source effects for the types in the largest group identified in the clustering because 
+the source matrix for these types is very sparse, and all have zero human cases. This means that the type effect becomes very small and dominates the source effect.
+
+Care must be taken in performing marginal interpretations of the number of parameters. It is much easier to split a group into two (with similar group means) than it is to merge two 
+groups with clearly different means. Hence, a histogram of the number of groups per iteration is positively skewed compared to the true number of groups. When fitting the model with simulated data, 
+visually assessing the dendrogram and heatmap to determine the number of groups usually provides a closer value to the true number of groups than looking at a histogram, particularly when the 
+group means are well separated. 
+
+The results of the clustering of the type effects is of biological interest as it could be used to identify alleles that are correlated with high (or low) virulence, survivability and pathogenicity.
+The analysis could therefore provide an early warning system for the emergence of dangerous pathogen types in, for example, a particular food processing facility.
+Additionally, it may identify clusters of strains having particular traits that could be explored using further genotyping or phenotyping assays.
+
+\subsection{Posterior correlations between the source and type effects}
+In the Hald and Modified Hald models there is an inherent posterior correlation between the mean of the source and type effects because the model does not include an explicit mean or constrain the 
+scale of the source or type parameters. This causes a decrease in mixing quality and increases the width of the credible intervals for the source and type effects. This correlation has been greatly 
+reduced in our model by constraining the scale of the source effects using a Dirichlet prior. However, aposteriori correlations between some source and type effects (and hence some $\lambda_j$ 
+parameters and the source and type effects) may occur if the source matrix is highly unbalanced (especially if it contains many zero's as in the \emph{Campylobacter} data set used above). Although 
+a highly unbalanced source matrix can make fitting the model difficult, a heterogeneous distribution of types is a essential for the model to find the solution with the highest probability of occurrence, 
+as there would be little information contained in the observations of human cases if the types were approximately equally distributed among the food sources \citep{HaldVosWed04}. The introduction 
+of uncertainty into a relative prevalence matrix prevents any source-type combination from being 0 which reduces the heterogeneity of the relative prevalence matrix because it forces the larger 
+components to be reduced (as the vector $\mathbf{r}_j$ must sum to 1 over the types for each source). Whether or not to allow true zero's in the prevalence matrix depends on whether there are truly 
+apathogenic types (for a particular source).
+
+The source matrix for the simulated data analysed in Section \ref{sim_study_section} was drawn from a $\textsf{Uniform}(1, 100)$ distribution which meant the matrix was not sparse, nor highly 
+imbalanced. Simulating data with a sparse, highly unbalanced source matrix reduced mixing quality and increased posterior correlations between some source and type effects. Alternative fitting 
+algorithms such as NUTS \citep{HomGel14} converge to high-dimensional target distributions much more quickly than simpler methods such as random walk Metropolis or Gibbs sampling (that are 
+currently used in \pkg{sourceR}). This is because they avoid the random walk behaviour and sensitivity to correlated parameters that are causing slow mixing for the highly unbalanced 
+\emph{Campylobacter} data set. Currently, Dirichlet processes cannot be fitted using NUTS, hence, a hybrid algorithm, where the clustering is fitted using a standard CRP, and the other parameters 
+are updated using NUTS would likely improve mixing significantly. This may be implemented in a future release for the \pkg{sourceR} package.
+
+If there are multiple times and / or locations, it is much easier to identify the type effects groups 
+because they are constant over all times and locations.
+
+\subsection{Comparison of the number of cases attributed to each source for current source attribution models} %$\lambda_j$ 
+% \todo{Should I address this or is it obvious} In the simulation study, one of the credible intervals for the 20 $\lambda_{j}$'s has the true value on the border of the credible interval for the posterior, however, it is a 95\% credible interval so the probability that the range does not contain the true value is approximately 5\% (1 in 20).
+Figure~\ref{fig:lambda_j_real} shows the proportion of cases attributed to each source for each of the commonly used source attribution models in addition to the new model. The median values are 
+similar between all models except the Dutch method. The credible intervals of the Dutch model are very narrow because there are far fewer parameters in the model, however, the lack of source and 
+type effects in the model biases the results. 
+
+The Island model has much narrower credible intervals than the other models, however it is much more complex than the other models, and hence it has many implicit assumptions (such as the 
+assumptions about mutation, recombination and migration rates, which are likely to be gross simplifications). The narrower credible intervals produced by the Island model could be due to more bias 
+(if the model assumptions are not correct) or more accuracy (due to the additional genetic information that is used).  Our model (as with the Hald and Modified Hald models) ignores the genetic similarities between types, which loses some information and prevents attribution of novel types in human isolates to a 
+likely source. However, the Island models reliance on detailed genetic data prevents the use of data where phenotypic typing methods were used, reducing the range of data for which the model is 
+applicable. 
+
+The modified Hald model has very wide credible intervals compared to the other models. This may be because the prevalence matrix is less restricted (as it is modelled using independent Beta's for 
+each $ij$), that uncertainty is modelled for the source prevalences ($\pi_{j}$) or that the model is less identifiable due to the effective number of parameters still being large. Although it would be 
+preferable to allow uncertainty in the source prevalences, we decided to use point estimates in our model. This is because they have the same functional form as the source effects in the model, 
+hence they cannot be identified from the source effects in a fully joint model without very strong priors.
+
+\subsection{Source and type effect interpretation}
+The interpretation of source and type effects for this model depends on the quality and type of data collected, the model specification, and the characteristics of the organism of interest. Type effects 
+summarise the characteristics that determine a types capacity to cause an infection, such as survivability during food processing, pathogenicity or virulence (measured in cases per dose of bacteria 
+population). Source effects account for the ability of a particular source to act as a vehicle of infection. This includes factors such as the amount of the food source consumed (if an offset for 
+consumption is not used), the physical properties of the source and the environment provided for the bacteria through storage and preparation. A high source effect may reflect a high exposure, but 
+not necessarily a high ability of the individual food source to cause disease. Including an environmental source in the model can be thought of as grouping the (individually) unmeasured wildlife 
+sources into one. It may also be a transmission pathway for pathogens present in livestock sources (for example, through the contamination of waterways) which complicates the interpretation 
+meaning the source effects no longer directly summarize the ability of the source to act as a vehicle for food-borne infections \citep{HaldVosWed04}.
+
+\subsection{Apathogenic subtypes}
+Potentially pathogenic types (that is types found in the sources but not humans) are included in the model as it is assumed that these types are rarely (rather than never) found in humans. The model 
+cannot attribute types that have been detected in humans but not in any of the sources because there is no information relating them to the sources (as with the Hald and modified Hald models). The Island model \citep{WilGabLea08} can attribute types undetected in a source using inferences on genetic relatedness, 
+however, it cannot use data where types are distinguished by phenotypic characteristics. In addition to excluding human cases for types not detected in any sources, cases with a history of travel in 
+the incubation period are assumed to have acquired the disease overseas, and are therefore excluded from the model. 
+
+At present it is assumed that both humans and all sources can potentially be infected by all types, albeit some very rarely. If a 
+type is truly apathogenic in humans, then this approach is likely to overestimate the type incidence $\lambda_i$.  A future development may therefore be to to allow for zero inflation in the prevalence matrices and human data. However, the \pkg{sourceR} package currently allows the relative prevalence matrix to be fixed at the maximum 
+likelihood estimates, which includes zero values where a particular type was not detected in any samples from a source.  Fixing the relative prevalence matrix increases the posterior precision, but 
+the results may be biased if the source data is not of a high quality. The relative prevalence matrix can be fixed by setting \code{r} to \code{TRUE} in the \code{params\_fix} argument to 
+\code{saBayes}. 
+
+\subsection{Model extensions}
+There are many alternative model extensions to those implemented in the \pkg{sourceR} package. These include:
+
+\begin{enumerate}
+\item Adding in an independent time and/or location term
+\item Adding time and/or location dependence to the type factors $q_{i}$
+\item Model autocorrelation between parameters over time
+\item Add interaction terms between the source and type effects
+%\item Remove type effects and model the human counts with Negative Binomial distribution
+\end{enumerate}
+
+\paragraph{Extension 1} is useful for modelling dynamic behaviour, however, it assumes that the changes are independent of sources and types. It is more likely that the changes are specific to a few 
+sources or types. Hence, it is preferable to add the dependence into the source and/or type terms so that is is possible to identify which parts of the epidemiology are likely to be the cause of the 
+observed changes in the attribution. This model is a subset of the other models where the time/ location dependent behaviour is independent of the source, type and prevalence.
+
+\paragraph{Extension 2} involves adding temporal or location dependence to the type effects. Type effects do not change in each location as they depend on the genetics of each bacterial 
+subtype. Evolution of subtypes over time could cause changes to their virulence, pathogenicity and survivability (and hence type effect). There is evidence that 
+\emph{Campylobacter} can evolve quickly \cite{WilGabLeath09}, however, assuming the type effects are fixed over time is equivalent to assuming that the types are likely adapted to a particular source, and 
+that any further adaptation to a new source is likely to coincide with a change in biology, and hence, the introduction of a new sequence type \citep{FreMar09}. Changes to the type effects over time 
+(or location) are likely to have a much smaller impact on the source attribution than changes to the source effects because the source factor applies to all subtypes on a given source (and there are 
+many more types than sources). At present, the package does not support type effects changing over time, however, this is a feature that may be implemented in a further release. 
+
+Future releases of the package will also allow the user to independently specify whether the source, type and prevalence parameters are time or location dependent. Currently, if the human cases are 
+modelled with time and location information, the source effects must also vary over the same times and locations, whilst the relative prevalence matrix must vary over only the times. For example, it may be preferable to use a single prevalence matrix (if subsetting the matrix over time makes it too sparse, or if the source data was collected at different times to the human data), but allow the human cases and source effects to vary over time.
+
+\paragraph{Extension 3:} another improvement would be to allow autocorrelation between the parameters over time, rather than modelling them as separable. An AR(1) model has been used in NZ attribution studies via modifications to the asymmetric island model \citep{FreMar15}.
+
+\paragraph{Extension 4} involves adding interaction terms between the source and type effects to the model to allow for the biologically plausible possibility that certain subtypes are more or less 
+likely to survive and cause disease, dependent on the food source they appear in. However, this would significantly increase the number of parameters and reduce identifiability of the model. 

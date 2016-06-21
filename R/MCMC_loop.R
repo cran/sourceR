@@ -7,7 +7,6 @@ doMCMC <- function(data = list(source_data = source_data, human_data = human_dat
   ######################################################################################################
   save_i <- seq((mcmc_params$burn_in + 1), n_iter, by = mcmc_params$thin) 
   
-  adaptive_a <- TRUE
   print_freq <- max(1, round(n_iter / 10))
   
   source_data <- list() 
@@ -553,12 +552,19 @@ doMCMC <- function(data = list(source_data = source_data, human_data = human_dat
       }
     }
     
-    save_lambdas <- function(params_cur, no_J, no_I, no_T, no_L, k) {
+    save_lambda_i <- function(params_cur, no_I, no_T, no_L, k) {
       update_li <- calc_li(no_J, no_I, no_T, no_L, r = params_cur$r, a = params_cur$a, prev = prev, q = params_cur$q) 
-      update_lj <- calc_lj(no_J, no_I, no_T, no_L, r = params_cur$r, a = params_cur$a, prev = prev, q = params_cur$q)
       for (t in 1 : no_T) {
         for (l in 1 : no_L) {
           posterior$li[[t]][[l]][k, ] <<- update_li[[t]][[l]]
+        }
+      }
+    }
+    
+    save_lambda_j <- function(params_cur, no_J, no_T, no_L, k) {
+      update_lj <- calc_lj(no_J, no_I, no_T, no_L, r = params_cur$r, a = params_cur$a, prev = prev, q = params_cur$q)
+      for (t in 1 : no_T) {
+        for (l in 1 : no_L) {
           posterior$lj[[t]][[l]][k, ] <<- update_lj[[t]][[l]]
         }
       }
@@ -590,18 +596,32 @@ doMCMC <- function(data = list(source_data = source_data, human_data = human_dat
     }
     save_r <- create_save_r(params_fix$r)
     
-    save_params <- function(params_cur, no_J, no_I, no_T, no_L, k, fix_r, save_lambda, likelihood_dist) {
-      save_a(params_cur, no_T, no_L)
-      if (save_lambda == TRUE) {
-        save_lambdas(params_cur, no_J, no_I, no_T, no_L, k)
-      } 
-      if (likelihood_dist == "nbinom") {
-        posterior$d[k] <<- params_cur$d
-        save_q_nbinom(params_cur, k)
-      } else {
-        save_q(params_cur, k)
+    save_params <- function(params_cur, no_J, no_I, no_T, no_L, k, fix_r, save_param_vals, likelihood_dist) {
+      if ("a" %in% save_param_vals) {
+        save_a(params_cur, no_T, no_L)
       }
-      if (fix_r == FALSE) {
+      
+      if ("li" %in% save_param_vals) {
+        save_lambda_i(params_cur, no_I, no_T, no_L, k)
+      } 
+      
+      if ("lj" %in% save_param_vals) {
+        save_lambda_j(params_cur, no_J, no_T, no_L, k)
+      } 
+      
+      if (likelihood_dist == "nbinom") {
+        if ("d" %in% save_param_vals) {
+          posterior$d[k] <<- params_cur$d
+        }
+        if ("q" %in% save_param_vals) {
+          save_q_nbinom(params_cur, k)
+        }
+      } else {
+        if ("q" %in% save_param_vals) {
+          save_q(params_cur, k)
+        }
+      }
+      if (fix_r == FALSE && ("r" %in% save_param_vals)) {
         save_r(params_cur, k)
       }
     }
@@ -644,11 +664,12 @@ doMCMC <- function(data = list(source_data = source_data, human_data = human_dat
   k <- 0
 
   for (i in 1 : n_iter) {
-#     if (isTRUE(all.equal((i %% print_freq), 0))) {
-#       if (i > 0) { 
-#         print_accept_rate(acceptance, i, no_T, no_L)
-#       }
-#     }
+    if (isTRUE(all.equal((i %% print_freq), 0))) {
+      if (i > 0) { 
+        # print_accept_rate(acceptance, i, no_T, no_L)
+        cat("Iteration ",i," of ", n_iter, "\n")
+      }
+    }
     
     if (i %in% save_i) {
       k <- k + 1
@@ -710,7 +731,7 @@ doMCMC <- function(data = list(source_data = source_data, human_data = human_dat
     ############ Save parameters #################################################
     ##############################################################################
     if (i %in% save_i) {
-      save_params(params_cur, no_J, no_I, no_T, no_L, k, params_fix$r, mcmc_params$save_lambda, likelihood_dist)
+      save_params(params_cur, no_J, no_I, no_T, no_L, k, params_fix$r, mcmc_params$save_params, likelihood_dist)
       save_r(params_cur, k)
     }
   }

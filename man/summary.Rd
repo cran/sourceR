@@ -36,20 +36,48 @@ Returns a list with possible names \code{a}, \code{q}, \code{alpha}, \code{r}, \
 
   \tabular{lll}{
   \emph{Parameter} \tab \emph{Format and nesting} \tab \emph{Returns}\cr
+
   
-  Source effects (\code{a}) \tab A nested list with a matrix for each time and location. eg \code{posterior$a[[t]][[l]][,j]} gives the median, lower and upper values of the Chen Shao HPD region for \code{a} \code{j} for time \code{t}, location \code{l}. \tab Always returned. \cr
+  Source effects (\code{a}) 
+  \tab A nested list with a matrix for each time and location. \tab Always returned. \cr
+  \tab eg \code{posterior$a[[t]][[l]][,j]} gives the median, \tab \cr
+  \tab lower and upper values of the Chen Shao HPD region for  \tab \cr
+  \tab \code{a} \code{j} for time \code{t}, location \code{l}. \tab \cr
   
-  Type effects (\code{q}) \tab A matrix. eg \code{posterior$q[,i]} gives the the median, lower and upper values of the Chen Shao HPD region for \code{q} \code{i} for time \code{t}. \tab Returned if \code{names(posterior)} contains \code{q}. \cr
+  Type effects (\code{q}) 
+  \tab A matrix. eg \code{posterior$q[,i]} gives the the median, \tab Returned if \cr
+  \tab lower and upper values of the Chen Shao HPD region for \tab \code{names(posterior)} \cr
+  \tab \code{q} \code{i} for time \code{t}. \tab contains \code{q}.\cr
   
-    \code{r} \tab A nested list containing an array for each time. eg \code{posterior$r[[t]][i,j,]} gives the  median, lower and upper values of the Chen Shao HPD region for \code{r} (type \code{i}, source \code{j}) at time \code{t}. \tab Returned if \code{names(posterior)} contains \code{r}. \cr
+  \code{r} 
+  \tab A nested list containing an array for each time. \tab Returned if \cr
+  \tab eg \code{posterior$r[[t]][i,j,]} gives the  median, lower \tab \code{names(posterior)} \cr
+  \tab and upper values of the Chen Shao HPD region for \code{r} \tab contains \code{r}. \cr
+  \tab (type \code{i}, source \code{j}) at time \code{t}. \tab \cr
   
-  Dispersion parameter (\code{d}) \tab An vector. \tab Returned if \code{names(posterior)} contains \code{d}. \cr
+  Dispersion parameter (\code{d}) \tab A vector. \tab Returned if \cr
+  \tab \tab \code{names(posterior)} \cr
+  \tab \tab contains \code{d}. \cr
   
-  Rate of human infection from type \code{i} (Lambda i: \code{li}) \tab A nested list with a matrix for each time and location. eg \code{posterior$li[[t]][[l]][,i]} gives the median, lower and upper values of the Chen Shao HPD region for \code{li} \code{i} for time \code{t}, location \code{l}. \tab Returned if \code{names(posterior)} contains \code{li}. \cr
+  Rate of human infection  
+  \tab A nested list with a matrix for each time and location. \tab Returned if \cr
+  from type \code{i} (Lambda i: \code{li}) \tab eg \code{posterior$li[[t]][[l]][,i]} gives the median, \tab \code{names(posterior)}\cr
+  \tab lower and upper values of the Chen Shao HPD region for \tab contains \code{li}. \cr
+  \tab \code{li} \code{i} for time \code{t}, location \code{l}. \tab \cr
   
-  Rate of human infection from source \code{j} (Lambda j: \code{lj}) \tab A nested list with a matrix for each time and location. eg \code{posterior$lj[[t]][[l]][,j]} gives the median, lower and upper values of the Chen Shao HPD region for \code{lj} \code{j} for time \code{t}, location \code{l}. \tab Returned if \code{names(posterior)} contains \code{lj}. \cr
+  Rate of human infection  
+  \tab A nested list with a matrix for each time and location. \tab Returned if \cr
+  from source \code{j} (Lambda j: \code{lj}) \tab eg \code{posterior$lj[[t]][[l]][,j]} gives the median, \tab \code{names(posterior)}\cr
+  \tab lower and upper values of the Chen Shao HPD region for \tab contains \code{lj}. \cr
+  \tab \code{lj} \code{j} for time \code{t}, location \code{l}. \tab \cr
   
-    Proportion of human infection from source \code{j} (\code{lj_proportion}) \tab A nested list with a matrix for each time and location. eg \code{posterior$lj_proportion[[t]][[l]][,j]} gives the median, lower and upper values of the Chen Shao HPD region for \code{lj_proportion} \code{j} for time \code{t}, location \code{l}. \tab Returned if \code{names(posterior)} contains \code{lj}. \cr
+      Proportion of human 
+    \tab A nested list with a matrix for each time and location. \tab Returned if \cr
+    infection from source \tab eg \code{posterior$lj_proportion[[t]][[l]][,j]} gives \tab \code{names(posterior)} \cr
+     \code{j} (\code{lj_proportion}) \tab the median, lower and upper values of the Chen Shao HPD \tab  contains \code{lj}. \cr
+    \tab region for \code{lj_proportion} \code{j} for time \code{t}, \tab \cr
+    \tab location \code{l}. \tab \cr
+
 }
 
 }
@@ -62,7 +90,7 @@ Poppy Miller <poppy.p.miller@gmail.com>
 }
 
 \seealso{
-\code{\link{saBayes}}
+\code{\link{saBayes}, \link{flatten}, \link{subset_posterior}}
 }
 \examples{
 

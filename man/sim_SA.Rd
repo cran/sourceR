@@ -13,7 +13,8 @@ Data simulated from the source attribution model. Intended for use demonstrating
 \tabular{lll}{
   \emph{Parameter} \tab \emph{Format}\cr
  prev \tab Dataframe giving the prevalence values, source id and time identifiers for each source. \cr
- data \tab Dataframe giving the number of human cases for each type, time and location; and the number of positive source samples for each source, type, and time.\cr
+ data \tab Dataframe giving the number of human cases for each type, time and location; and the \cr
+ \tab number of positive source samples for each source, type, and time.\cr
  \tab ..$ Human   : number of human cases \cr
  \tab ..$ Type    : type id\cr
  \tab ..$ Time    : time id\cr
