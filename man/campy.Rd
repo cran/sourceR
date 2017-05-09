@@ -4,19 +4,28 @@
 \name{campy}
 \alias{campy}
 \title{Human cases of campylobacteriosis and numbers of source samples positive for \emph{Campylobacter}.}
-\format{A data frame with 115 rows and 10 variables:
+\format{A list containing the human cases (`cases'), source samples (`sources'0 and, prevalences (`prev').
+
+\strong{cases:} data frame with 91 rows and 2 variables:
 \describe{
   \item{Human}{number of human cases of campylobacteriosis between 2005-2008 in the Manawatu
   region of New Zealand}
-  \item{ChickenA}{number of samples of chicken from supplier A out of a total of 239 tested}
-  \item{ChickenB}{number of samples of chicken from supplier B out of a total of 196 tested}
-  \item{ChickenC}{number of samples of chicken from supplier C out of a total of 127 tested}
-  \item{Bovine}{number of bovine samples out of a total of 595 tested}
-  \item{Ovine}{number of ovine samples out of a total of 552 tested}
-  \item{Environment}{number of environmental samples out of a total of 524 tested}
-  \item{Time}{Time id for the samples}
-  \item{Location}{Location id for the samples}
   \item{Type}{MLST type id for the samples}
+}
+
+\strong{sources:} data frame with 690 rows and 3 variables
+\describe{
+  \item{Count}{number of source samples positive for campylobacteriosis}
+  \item{Source}{Source id for the samples}
+  \item{Type}{MLST type id for the samples}
+}
+
+\strong{prev:} data frame with 6 rows and 4 variables
+\describe{
+  \item{Value}{Prevalence value (number of positive samples divided by total number of samples)}
+  \item{Source}{Source id for the samples}
+  \item{n_positive}{number of positive source samples for campylobacter (PCR)}
+  \item{n_total}{total number of source samples tested for campylobacter}
 }}
 \usage{
 campy
@@ -26,4 +35,3 @@ A dataset containing the number of human cases of campylobacteriosis and numbers
 positive for \emph{Campylobacter} for each bacterial subtype.
 }
 \keyword{datasets}
-

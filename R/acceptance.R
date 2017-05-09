@@ -10,8 +10,8 @@ Acceptance = R6::R6Class("acceptance",
                                                  namesTimes,
                                                  namesLocations,
                                                  namesTypes,
-                                                 paramsFix) {
-                             if (paramsFix$alpha == FALSE) {
+                                                 updateSchema) {
+                             if ('alpha' %in% updateSchema) {
                                self$alpha <- array(
                                  dim = c(nSources,
                                          nTimes,
@@ -25,7 +25,7 @@ Acceptance = R6::R6Class("acceptance",
                                )
                              }
 
-                             if (paramsFix$r == FALSE) {
+                             if ('r' %in% updateSchema) {
                                self$r <- array(
                                  dim = c(nTypes,
                                          nSources,

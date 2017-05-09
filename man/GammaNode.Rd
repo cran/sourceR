@@ -25,6 +25,6 @@ Derived from \link{StochasticNode}, please see base class documentation.
    \code{shape} and \code{rate} as specified in \link{dgamma}.}
   }
 }
+
 \keyword{DAG}
 \keyword{node}
-

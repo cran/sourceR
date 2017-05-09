@@ -3,7 +3,7 @@
 \docType{class}
 \name{DirichletProcessNode}
 \alias{DirichletProcessNode}
-\title{Transformed Dirichlet node}
+\title{DirichletProcessNode}
 \format{Object of \code{\link{R6Class}} with methods for constructing a DAG.}
 \usage{
 DirichletProcessNode
@@ -12,15 +12,9 @@ DirichletProcessNode
 Object of \code{\link{DirichletProcessNode}}
 }
 \description{
-Uses transformation due to Betancourt 2013
-https://arxiv.org/pdf/1010.3436v4.pdf
+Represents a Dirichlet process as a single node in a DAG.
 }
 \details{
-Experimental -- do not use.
-DirichletProcessNode
-
-Represents a Dirichlet process as a single node in a DAG.
-
 Derived from \link{StochasticNode}, please see base class documentation.
 }
 \section{Methods}{
@@ -32,6 +26,6 @@ Derived from \link{StochasticNode}, please see base class documentation.
   are specified in \code{...}.}
   }
 }
+
 \keyword{DAG}
 \keyword{node}
-

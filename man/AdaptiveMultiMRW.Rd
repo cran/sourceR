@@ -40,6 +40,7 @@ to use the correct update algorithm for the appropriate nodes.
 
 \item{\code{node}}{the node to which the updater is attached}
 }}
+
 \section{Methods}{
 
 \describe{
@@ -49,7 +50,7 @@ to use the correct update algorithm for the appropriate nodes.
   \item{\code{acceptance()}}{return the acceptance rate}
 }
 }
+
 \keyword{DAG}
 \keyword{MCMC}
 \keyword{node}
-

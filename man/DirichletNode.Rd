@@ -24,6 +24,6 @@ Derived from \link{StochasticNode}, please see base class documentation.
    \code{alpha}}.
   }
 }
+
 \keyword{DAG}
 \keyword{node}
-

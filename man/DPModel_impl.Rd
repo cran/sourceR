@@ -54,5 +54,5 @@ Developers only here!
 \item{\code{alpha}}{3D array of [source, time, location] giving initial values for the alpha
 parameters}
 }}
-\keyword{datasets}
 
+\keyword{datasets}

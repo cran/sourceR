@@ -22,12 +22,13 @@ Derived from \link{Node}, please see base class documentation.
 \describe{
 \item{\code{data}}{the data}
 }}
+
 \section{Methods}{
 
 \describe{
   \item{\code{getData()}}{returns the node's data.}
   }
 }
+
 \keyword{DAG}
 \keyword{node}
-

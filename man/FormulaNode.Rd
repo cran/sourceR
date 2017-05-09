@@ -25,6 +25,6 @@ Derived from \link{Node}, please see base class documentation.
   \item{\code{getData()}}{returns the node's transformed data.}
   }
 }
+
 \keyword{DAG}
 \keyword{node}
-

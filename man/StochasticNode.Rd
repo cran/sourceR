@@ -22,6 +22,7 @@ Derived from \link{Node}, please see base class documentation.
 \describe{
 \item{\code{data}}{contains the node's data}
 }}
+
 \section{Methods}{
 
 \describe{
@@ -29,6 +30,6 @@ Derived from \link{Node}, please see base class documentation.
   \item{\code{getData()}}{returns the node's data.}
   }
 }
+
 \keyword{DAG}
 \keyword{node}
-

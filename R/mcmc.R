@@ -530,13 +530,13 @@ PoisGammaDPUpdate <- R6::R6Class(
           pi <- exp(logpi)
 
           s_old <- self$node$s[i]
-          idx <- sample(length(pi),1, prob = pi)
+          idx <- sample(length(pi),1,prob = pi)
 
           # Check if we're adding another cluster
           # n.b. could use has.key(model$s[i], model$theta)
           #      but almost certainly slower.
           if (idx == length(pi)) {
-            self$node$s[i] <- uuid::UUIDgenerate(TRUE)
+            self$node$s[i] <- dequeue(self$node$idBucket)
             self$node$theta$insert(self$node$s[i], rgamma(1, self$alpha + y[i], self$beta + aX[i]))
             nk[self$node$s[i]] <- 0 # Add new class, increment later
           }
@@ -552,6 +552,7 @@ PoisGammaDPUpdate <- R6::R6Class(
             # Delete class
           {
             self$node$theta$erase(s_old)
+            enqueue(self$node$idBucket, s_old)
             nk <- nk[names(nk) != s_old]
             if (any(is.na(nk)))
               browser()
@@ -559,7 +560,7 @@ PoisGammaDPUpdate <- R6::R6Class(
           nk[self$node$s[i]] <- nk[self$node$s[i]] + 1
         }
 
-        # Update theta -- sapply here?
+        # Update theta
         for (label in self$node$theta$keys())
         {
           sumy <- sum(y[self$node$s == label])

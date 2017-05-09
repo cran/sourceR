@@ -3,18 +3,67 @@
 \docType{class}
 \name{HaldDP}
 \alias{HaldDP}
-\title{Runs the HaldDP source attribution model}
+\title{Builds a HaldDP source attribution model}
 \format{Object of \code{\link{R6Class}} with methods for creating a HaldDP model,
 running the model, and accessing and plotting the results.}
 \usage{
-HaldDP
+HaldDP(y, x, k, priors, a_q, inits = NULL)
+}
+\arguments{
+\item{y}{a \code{\link{Y}} object containing case observations}
+
+\item{x}{an \code{\link{X}} object containing source observations}
+
+\item{k}{a \code{\link{Prev}} object containing source prevalences}
+
+\item{priors}{\code{priors} list with elements named \code{a_r}, \code{a_alpha}, \code{a_theta} and \code{b_theta},
+  corresponding to the prior parameters for the \code{r}, \code{alpha}, and base
+  distribution for the DP parameters respectively.
+
+  \tabular{lllll}{
+  \emph{Parameter} \tab \emph{Prior Distribution} \tab \emph{Prior Parameters}\cr
+  \code{a_r} \tab Dirichlet(concentration) \tab A single positive number or an \code{\link{X}} \cr
+  \tab \tab  object containing the prior values for each source,\cr
+  \tab \tab time and type. If a single number is supplied,\cr
+  \tab \tab it will be used for all times, sources and types. \cr
+
+  \code{a_alpha} \tab Dirichlet(concentration) \tab A single positive number or an \code{\link{Alpha}} \cr
+  \tab \tab  object containing the prior values for each source,\cr
+  \tab \tab time and location. If a single number is supplied,\cr
+  \tab \tab it will be used for all times, sources and locations. \cr
+
+  Type effects base \tab Gamma(shape, rate) \tab Single number for each of the shape (a_theta) and \cr
+  distribution parameters \tab \tab rate (b_theta) of the Gamma base distribution.\cr
+  }}
+
+\item{a_q}{the Dirichlet Process concentration parameter.}
+
+\item{inits}{initial values for the mcmc algorithm. This is an optional list
+  that may contain any of the following items: \code{alpha},\code{q}, and \code{r}.
+
+  \tabular{lll}{
+  \emph{Parameter} \tab \emph{Description} \cr
+  \code{r}
+  \tab An object of type \code{\link{X}} giving the initial values for $R$ matrix,\cr
+  \tab If not specified defaults to the element-wise maximum likelihood\cr
+  \tab estimates of \code{r} from the source matrix.\cr
+  Source effects (\code{alpha})
+  \tab An object of type \code{\link{Alpha}} specifying alpha value for each source/time/location.\cr
+  \tab If not specified, default initial values\cr
+  \tab for the source effects are drawn from the prior distribution. \cr
+  Type effects (\code{q})
+  \tab An object of type \code{\link{Q}} giving the initial clustering and values for \eqn{q}\cr
+  \tab If not specified, defaults to a single group with a theta value calculated as \cr
+  \tab \eqn{\theta = sum(y_itl) / sum_l=1^L(sum_t=1^T(sum_i=1^n(sum_j=1^m(alpha_jtl * r_ijt * k_jt))))}. \cr
+  \tab i.e. \eqn{theta = sum(y_itl) / sum(lambda_ijtl / theta)}
+  }}
 }
 \value{
 Object of \code{\link{HaldDP}} with methods for creating a HaldDP model,
 running the model, and accessing and plotting the results.
 }
 \description{
-Runs the HaldDP source attribution model
+Builds a HaldDP source attribution model
 }
 \section{Description}{
 
@@ -23,82 +72,11 @@ disease. It supports multiple types, sources, times and locations. The number of
 human cases for each type, time and location follow a Poisson likelihood.
 }
 
-\section{Methods}{
+\section{HaldDP Object Methods}{
 
 \describe{
-  \item{\code{new(data, k, priors, a_q, inits = NULL)}}{Constructor takes
-
-  \code{data} dataframe (with columns containing the number of human cases named
-  \code{Human}, columns containing the number of positive source samples
-  (one column per source), a column with the time id's named \code{Time},
-  a column with the type id's named \code{Type}, and a column with the source
-  location id's \code{Location}). The data for the human cases and source
-  counts must be integers. The data for the time, location and type columns
-  must be factors. The source counts are currently only allowed to vary over time,
-  hence they must be repeated for each location within each time.
-
-  \code{k} prevalence dataframe (with columns named \code{Value, Time,
-  Location and Source}). Prevalences must be between 0 and 1 as they are the
-  proportion of samples that were positive for any type for a given source and time.
-
-  \code{priors} list with elements named \code{a_r}, \code{a_alpha}, \code{a_theta} and \code{b_theta},
-  corresponding to the prior parameters for the \code{r}, \code{alpha}, and base
-  distribution for the DP parameters respectively.
-
-  \tabular{lllll}{
-  \emph{Parameter} \tab \emph{Prior Distribution} \tab \emph{Prior Parameters}\cr
-  \code{a_r} \tab Dirichlet(concentration) \tab A single positive number or a data \cr
-  \tab \tab frame with columns giving the prior values \cr
-  \tab \tab (named \code{Value}), times (named Time) \cr
-  \tab \tab and source ids (named \code{Source}. If a\cr
-  \tab \tab single number is supplied, it will be used for\cr
-  \tab \tab all times, sources an locations. \cr
-
-  \code{a_alpha} \tab Dirichlet(concentration) \tab A single positive number or a dataframe \cr
-  \tab \tab with columns giving the prior values (named  \cr
-  \tab \tab \code{value}), times (named the name of the \cr
-  \tab \tab time column in the data), locations (named the \cr
-  \tab \tab name of the location column in the data) and \cr
-  \tab \tab the source id (named \code{source_id}). \cr
-
-  Type effects base \tab DPM(Gamma(shape, rate), \tab Numerical vector of length 2 for the shape and \cr
-  distribution (\code{theta}) \tab alpha)\tab rate of the Gamma base distribution.\cr
-  }
-
-  \code{a_q} the Dirichlet Process concentration parameter.
-
-  \code{inits} (optional) initial values for the mcmc algorithm. This is a list
-  that may contain any of the following items: \code{alpha} (a data frame with
-  columns named \code{Value} contining the initial values, \code{Time},
-  \code{Location}, \code{Source}), \code{q} (a data frame with columns names
-  \code{Value} contining the initial values and \code{Type}), and \code{r} (a data
-  frame a column with the initial r values named \code{Value} (note these must
-  sum to 1 for each source-time combination), a column with the source id's
-  named \code{Source}, a column with the time id's named \code{Time}, a column
-  with the type id's named \code{Type}.)
-  An optional list giving the starting values for the parameters.
-  \tabular{lll}{
-  \emph{Parameter} \tab \emph{Description} \cr
-  \code{r}
-  \tab A data frame with columns giving the initial values (named \code{Value}),\cr
-  \tab times (named Time) and source and type id's (named \code{Source} and Type. \cr
-  \tab DEFAULT: the default initial values are the maximum likelihood point \cr
-  \tab estimates of \code{r} from the source matrix (i.e. \eqn{r_ij = x_ij / sum_i=1^n x_ij}).\cr
-  Source effects (\code{alpha})
-  \tab A data frame with columns named \code{Value} (containing the initial values), \cr
-  \tab \code{Source} (containing the source names) and columns giving the time and \cr
-  \tab location for each parameter (named Location). DEFAULT: The default initial values\cr
-  \tab for the source effects are drawn the prior distribution (Dirichlet). \cr
-  Type effects (\code{q})
-  \tab A data frame with columns giving the initial values (named \code{Value})\cr
-  \tab and the type ids (named Type). DEFAULT: initialise all type effects to be in \cr
-  \tab a single group with a theta value calculated as \cr
-  \tab \eqn{\theta = sum(Human_itl) / sum_l=1^L(sum_t=1^T(sum_i=1^n(sum_j=1^m(alpha_jtl * r_ijt * k_jt))))}. \cr
-  \tab i.e. \eqn{theta = sum(Human_itl) / sum(lambda_ijtl / theta)}}
-  }
-
-  \item{\code{fit_params(n_iter = 1000, burn_in = 0, thin = 1,
-  n_r = ceiling(private$nTypes * 0.2), params_fix = NULL)}}{when called, sets the mcmc
+  \item{\code{mcmc_params(n_iter = 1000, burn_in = 0, thin = 1,
+  n_r = ceiling(private$nTypes * 0.2), update_schema = c('q','alpha','r'))}}{when called, sets the mcmc
   parameters.
 
   \code{n_iter} sets the number of iterations returned (after removing
@@ -110,14 +88,14 @@ human cases for each type, time and location follow a Poisson likelihood.
   at each time-location-source combination (the default is 20 percent updated
   per iteration)
 
-  \code{params_fix} is a list with a logical value for any of the model parameters
-  (any of \code{"alpha", "r", or "q"}). For each parameter, if set to \code{TRUE},
-  the parameters will be fixed at their initial values and not updated.}
+  \code{update_schema} a character vector containing the parameters to update
+  (any of '\code{q}','\code{alpha}','\code{r}').
+  }
 
   \item{\code{update(n_iter, append = TRUE)}}{when called, updates the \code{HaldDP}
   model by running \code{n_iter} iterations.
 
-  If missing \code{n_iter}, the \code{n_iter} last set using \code{fit_params()}
+  If missing \code{n_iter}, the \code{n_iter} last set using \code{mcmc_params()}
   or \code{update()} is used.
 
   \code{append}
@@ -127,31 +105,31 @@ human cases for each type, time and location follow a Poisson likelihood.
   \code{burn_in} is removed. Running the model for the first time, or changing any
   model or fitting parameters will set \code{append = FALSE}. }
 
-  \item{\code{print_data}}{returns a list containing the human data \code{y}
+  \item{\code{get_data}}{returns a list containing the human data \code{y}
   (an array y[types, times, locations]), the source data \code{X} (an array X[types, sources, times]),
   the prevalence data (an array k[sources, times]), the type names, source names,
   time names, location names and number of different types, sources, times and locations.
   }
 
-  \item{\code{print_priors}}{returns a list containing the DP concentration
+  \item{\code{get_priors}}{returns a list containing the DP concentration
   parameter \code{a_q}, and the priors (R6 class with members named \code{a_alpha}
   (members are array \code{a_alpha[sources, times, locations]}), \code{a_r} (an array
   \code{a_r[types, sources, times]}), \code{a_theta} and \code{b_theta}).}
 
-  \item{\code{print_inits}}{returns an R6 class holding the initial values
+  \item{\code{get_inits}}{returns an R6 class holding the initial values
   (members are \code{alpha} (an array \code{alpha[sources, times, locations]}),
   \code{theta} (an array \code{theta[types, iters]}), \code{s} (an array
   \code{s[types, iters]}), and \code{r} (an array \code{r[types, sources, times]})).}
 
-  \item{\code{print_fit_params}}{returns a list of fitting parameters (\code{n_iter},
-  \code{append}, \code{burn_in}, \code{thin}, \code{params_fix} (R6 class with members
+  \item{\code{get_mcmc_params}}{returns a list of fitting parameters (\code{n_iter},
+  \code{append}, \code{burn_in}, \code{thin}, \code{update_schema} (R6 class with members
   \code{alpha}, \code{q}, \code{r})).}
 
-  \item{\code{print_acceptance}}{returns an R6 class containing the acceptance
+  \item{\code{get_acceptance}}{returns an R6 class containing the acceptance
   rates for each parameter (members are \code{alpha} (an array \code{alpha[sources, times, locations]}),
   and \code{r} (an array \code{r[types, sources, times]})).}
 
-  \item{\code{extract(params = c("alpha", "q", "s", "r", "lambda_i", "lambda_j", "lambda_j_prop"),
+  \item{\code{extract(params = c("alpha", "q", "s", "r", "lambda_i", "xi", "xi_prop"),
   times = NULL, locations = NULL, sources = NULL, types = NULL, iters = NULL,
   flatten = FALSE, drop = TRUE)}}{returns a list contining a subset of the parameters
   (determined by the \code{params} vector, \code{times}, \code{locations}, \code{sources}, \code{types} and \code{iters}).
@@ -161,20 +139,20 @@ human cases for each type, time and location follow a Poisson likelihood.
   subset of the following arrays: \code{alpha[Sources, Times, Locations, iters]}, \code{q[Types, iters]},
   \code{s[Types, iters]}, \code{r[Types, Sources, Times, iters]},
   \code{lambda_i[Types, Times, Locations, iters]},
-  \code{lambda_j[Sources, Times, Locations, iters]}.
+  \code{xi[Sources, Times, Locations, iters]}.
 
   \code{drop}
   determines whether to delete the dimensions of an array which have only one
   level when \code{flatten = FALSE}.}
 
   \item{\code{summary(alpha = 0.05, params = c("alpha", "q", "s", "r", "lambda_i",
-  "lambda_j" ,"lambda_j_prop"), times = NULL, locations = NULL, sources = NULL,
+  "xi" ,"xi_prop"), times = NULL, locations = NULL, sources = NULL,
   types = NULL, iters = NULL, flatten = FALSE, drop = TRUE, CI_type = "chen-shao")}}{
   returns a list contining the
   median and credible intervals for a subset of the parameters. The default credible
   interval type are Chen-Shao (\code{"chen-shao"}) highest posterior density intervals (alternatives
   are \code{"percentiles"} and \code{"spin"}).
-  See \code{extract} for details on the subsetting. \code{lambda_j_prop} returns the
+  See \code{extract} for details on the subsetting. \code{xi_prop} returns the
   proportion of cases attributed to each source \code{j} and is calculated by dividing
   each iteration of \code{lambda_{jtl}} values by their sum within each time \code{t}
   and location \code{l}.}
@@ -221,46 +199,152 @@ divided by the number of negative samples) \eqn{j}
 \deqn{q\sim DP(a_q, Gamma(a_{theta},b_{theta}))}
 }
 }
+
 \examples{
-data(campy)
-zero_rows <- which(apply(campy[,c(2:7)], 1, sum) == 0)
-campy <- campy[-zero_rows,]
-prevs <- data.frame(Value = c(181/ 239, 113/196, 109/127,
-                              97/595, 165/552, 86/524),
-                    Source = colnames(campy[, 2:7]),
-                    Time = rep(1, 6),
-                    Location = rep("A", 6))
-priors <- list(a_alpha = 1, a_r = 0.1, a_theta = 0.01, b_theta = 0.00001)
-res <- HaldDP$new(data = campy, k = prevs, priors = priors, a_q = 0.1)
-res$fit_params(n_iter = 100, burn_in = 10, thin = 1)
-res$update()
+\dontrun{
+#### Format data using Y, X, and Prev functions #############################
+## Input data must be in long format
+y <- Y(                      # Cases
+  data = sim_SA$cases,
+  y = "Human",
+  type = "Type",
+  time = "Time",
+  location = "Location"
+)
 
-dat <- res$print_data()
-init <- res$print_inits()
-prior <- res$print_priors()
-acceptance <- res$print_acceptance()
-fit_params <- res$print_fit_params()
+x <- X(                      # Sources
+  data = sim_SA$sources,
+  x = "Count",
+  type = "Type",
+  time = "Time",
+  source = "Source"
+)
 
-res$plot_heatmap(iters = 10:100, hclust_method = "complete")
+k <- Prev(                   # Prevalences
+  data = sim_SA$prev,
+  prev = "Value",
+  time = "Time",
+  source = "Source"
+)
 
-summarys <- res$summary(params = c("alpha", "q", "lambda_i"),
-            times = "1", sources = c("ChickenA", "Bovine"),
-            iters = 10:100, flatten = TRUE, CI_type = "chen-shao")
+#### Create Dirichlet(1) priors #############################################
 
-posteriors <- res$extract(params = c("alpha", "r", "q", "lambda_j"),
-            sources = c("ChickenB", "Ovine"),
-            types = c("474", "52"),
-            iters = 50:100, drop = FALSE, flatten = FALSE)
+## Create alpha prior data frame
+prior_alpha_long <- expand.grid(
+  Source   = unique(sim_SA$sources$Source),
+  Time     = unique(sim_SA$sources$Time),
+  Location = unique(sim_SA$cases$Location),
+  Alpha    = 1
+)
+# Use the Alpha() constructor to specify alpha prior
+prior_alpha <- Alpha(
+  data     = prior_alpha_long,
+  alpha    = 'Alpha',
+  source   = 'Source',
+  time     = 'Time',
+  location = 'Location'
+)
+
+## Create r prior data frame
+prior_r_long <- expand.grid(
+  Type   = unique(sim_SA$sources$Type),
+  Source = unique(sim_SA$sources$Source),
+  Time   = unique(sim_SA$sources$Time),
+  Value  = 0.1
+)
+# Use X() constructor to specify r prior
+prior_r <- X(
+  data   = prior_r_long,
+  x      = 'Value',
+  type   = 'Type',
+  time   = 'Time',
+  source = 'Source'
+)
+
+## Pack all priors into a list
+priors <- list(
+  a_theta = 0.01,
+  b_theta = 0.00001,
+  a_alpha = prior_alpha,
+  a_r     = prior_r
+)
+
+## If all prior values are the same, they can be specified in shorthand
+## Equivalent result to the longform priors specified above
+priors <- list(
+  a_theta = 0.01,
+  b_theta = 0.00001,
+  a_alpha = 1,
+  a_r     = 0.1
+)
+
+#### Set initial values (optional) ##########################################
+types  <- unique(sim_SA$cases$Type)
+q_long <- data.frame(q=rep(15, length(types)), Type=types)
+init_q <- Q(q_long, q = 'q', type = 'Type')
+inits <- list(q = init_q) # Pack starting values into a list
+
+#### Construct model ########################################################
+my_model <- HaldDP(y = y, x = x, k = k, priors = priors, inits = inits, a_q = 0.1)
+
+#### Set mcmc parameters ####################################################
+my_model$mcmc_params(n_iter = 30, burn_in = 2, thin = 1)
+
+#### Update model ###########################################################
+my_model$update()
+## Add an additional 10 iterations
+my_model$update(n_iter = 10, append = TRUE)
+
+#### Extract posterior ######################################################
+## returns the posterior for the r, alpha, q, c,
+## lambda_i, xi and xi_prop parameters,
+## for all times, locations, sources and types
+## the posterior is returned as a list or arrays
+my_model$extract()
+
+## returns the posterior for the r and alpha parameters,
+## for time 1, location B, sources Source3, and Source4,
+## types 5, 25, and 50, and iterations 200:300
+## the posterior is returned as a list of dataframes
+my_model$extract(params = c("r", "alpha"),
+                 times = "1", location = "B",
+                 sources = c("Source3", "Source4"),
+                 types = c("5", "25", "50"),
+                 iters = 20:30,
+                 flatten = TRUE)
+
+#### Calculate medians and credible intervals ###############################
+my_model$summary(alpha = 0.05, CI_type = "percentiles")
+## subsetting is done in the same way as extract()
+my_model$summary(alpha = 0.05, CI_type = "chen-shao",
+                 params = c("r", "alpha"),
+                 times = "1", location = "B",
+                 sources = c("Source3", "Source4"),
+                 types = c("5", "25", "50"),
+                 iters = 20:30,
+                 flatten = TRUE)
+
+#### Plot heatmap and dendrogram of the type effect grouping ################
+my_model$plot_heatmap()
+
+#### Extract data, initial values, prior values, acceptance
+## rates for the mcmc algorithm and mcmc parameters
+my_model$get_data()
+my_model$get_inits()
+my_model$get_priors()
+my_model$get_acceptance()
+my_model$get_mcmc_params()
+
 }
-\author{
-Chris Jewell and Poppy Miller \email{p.miller at lancaster.ac.uk}
+
 }
 \references{
 Chen, M.-H. and Shao, Q.-M. (1998). Monte Carlo estimation of Bayesian
 credible and HPD intervals, \emph{Journal of Computational and Graphical Statistics}, 7.
 
-Liu Y, Gelman A, Zheng T (2015). "Simulation-efficient shortest probability
-intervals." Statistics and Computing.
+Liu Y, Gelman A, Zheng T (2015). Simulation-efficient shortest probability
+intervals, \emph{Statistics and Computing}.
 }
-\keyword{datasets}
-
+\author{
+Chris Jewell and Poppy Miller \email{p.miller at lancaster.ac.uk}
+}

@@ -23,6 +23,7 @@ This is a base class representing a node in a DAG. Is not intended to be used by
 
 \item{\code{name}}{a tag name applied to the node}
 }}
+
 \section{Methods}{
 
 \describe{
@@ -34,6 +35,6 @@ This is a base class representing a node in a DAG. Is not intended to be used by
   \item{\code{removeChild(name)}}{remove the child node named \code{name}.  Returns \code{node}.}
   }
 }
+
 \keyword{DAG}
 \keyword{node}
-

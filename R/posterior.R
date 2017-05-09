@@ -6,58 +6,88 @@ Posterior_HaldDP = R6::R6Class(
     alpha = NULL,
     r = NULL,
     lambda_i = NULL,
-    lambda_j = NULL,
-    lambda_j_prop = NULL,
-    initialize = function(nSources,
-                          nTimes,
-                          nLocations,
-                          nTypes,
-                          n_iter,
+    xi = NULL,
+    xi_prop = NULL,
+    iters = 0,
+    maxIters = 0,
+    chunkSize = 2000,
+    initialize = function(n_iter,
                           namesSources,
                           namesTimes,
                           namesLocations,
-                          namesTypes,
-                          namesIters) {
-      self$alpha <- array(
-        dim = c(nSources,
-                nTimes,
-                nLocations,
-                n_iter),
-        dimnames = list(
-          source = namesSources,
-          time = namesTimes,
-          location = namesLocations,
-          iter = namesIters
+                          namesTypes) {
+      self$maxIters = n_iter
+      self$alpha = to.tensor(
+        NA,
+        dim = list(
+          'source' = namesSources,
+          'time' = namesTimes,
+          'location' = namesLocations,
+          'iter' = 1:n_iter
         )
       )
-      self$q <- array(
-        dim = c(
-          nTypes,
-          n_iter
-        ),
-        dimnames = list(
-          type = namesTypes, iter = namesIters
+      class(self$alpha) = append(class(self$alpha), 'array')
+      self$q = to.tensor(NA,
+                         dim = list('type' = namesTypes,
+                                    'iter' = 1:n_iter))
+      class(self$q) = append(class(self$q), 'array')
+      self$s = to.tensor(NA,
+                         dim = list('type' = namesTypes,
+                                    'iter' = 1:n_iter))
+      class(self$s) = append(class(self$s), 'array')
+      self$r = to.tensor(
+        NA,
+        dim = list(
+          'type' = namesTypes,
+          'source' = namesSources,
+          'time' = namesTimes,
+          'iter' = 1:n_iter
         )
       )
+      class(self$r) = append(class(self$r), 'array')
+    },
+    sample = function(model) {
+      # Extend the posterior if we need to
+      self$iters = self$iters + 1
+      if (self$iters > self$maxIters)
+        self$extend(self$chunkSize)
 
-      self$s <- array(
-        dim = c(
-          nTypes,
-          n_iter
-        ),
-        dimnames = list(
-          type = namesTypes, iter = namesIters
-        )
-      )
-      self$r <- array(
-        dim = c(nTypes,
-                nSources,
-                nTimes,
-                n_iter),
-        dimnames = list(
-          type = namesTypes, source = namesSources, time = namesTimes, iter = namesIters
-        )
-      )
+      # Save chain state
+      for (time in 1:dim(self$alpha)[2]) {
+        for (location in 1:dim(self$alpha)[3]) {
+          self$alpha[, time, location, self$iters] <-
+            model$alphaNodes[[time]][[location]]$getData()
+        }
+        for (source in 1:dim(self$alpha)[1]) {
+          # TODO: change to an lapply?
+          self$r[, source, time, self$iters] <-
+            model$rNodes[[time]][[source]]$getData()
+        }
+      }
+      self$q[, self$iters] <-
+        model$qNodes$getData()
+      self$s[, self$iters] <- model$qNodes$s
+    },
+    extend = function(iters) {
+      # Extends the posterior file by iters iterations
+      rnames = list(1:(self$maxIters + iters))
+      self$alpha = arrayextend(self$alpha,
+                               along = 4,
+                               size = iters,
+                               newdimnames = rnames)
+      self$q     = arrayextend(self$q,
+                               along = 2,
+                               size = iters,
+                               newdimnames = rnames)
+      self$s     = arrayextend(self$s,
+                               along = 2,
+                               size = iters,
+                               newdimnames = rnames)
+      self$r     = arrayextend(self$r,
+                               along = 4,
+                               size = iters,
+                               newdimnames = rnames)
+      self$maxIters = self$maxIters + iters
     },
     calc_lambda_i = function(n_iter,
                              nTimes,
@@ -68,32 +98,18 @@ Posterior_HaldDP = R6::R6Class(
                              namesTypes,
                              namesIters,
                              k) {
-      self$lambda_i <- array(
-        dim = c(nTypes,
-                nTimes,
-                nLocations,
-                n_iter),
-        dimnames = list(
-          type = namesTypes,
-          time = namesTimes,
-          location = namesLocations,
-          iter = namesIters
-        )
+      k = as.tensor(k)
+      names(k) = c('source', 'time')
+      self$lambda_i = self$q * mul.tensor(
+        self$r,
+        i = 'source',
+        self$alpha * k,
+        j = 'source',
+        by = c('time', 'iter')
       )
-      if (!is.null(self$q)) { # don't try to calculate before any iterations have occured
-        for (i in 1:n_iter) {
-          for (times in 1:nTimes) {
-            for (locations in 1:nLocations) {
-              self$lambda_i[, times, locations, i] <- self$q[, i] * self$r[, , times, i] %*% (k[, times] * self$alpha[, times, locations, i])
-            }
-          }
-        }
-      } else {
-        self$lambda_i <- NULL
-      }
+      self$lambda_i = reorder.tensor(self$lambda_i, c('type', 'time', 'location', 'iter'))
     },
-
-    calc_lambda_j = function(n_iter,
+    calc_xi = function(n_iter,
                              nSources,
                              nTimes,
                              nLocations,
@@ -102,33 +118,13 @@ Posterior_HaldDP = R6::R6Class(
                              namesLocations,
                              namesIters,
                              k) {
-      self$lambda_j <- array(
-        dim = c(nSources,
-                nTimes,
-                nLocations,
-                n_iter),
-        dimnames = list(
-          source = namesSources,
-          time = namesTimes,
-          location = namesLocations,
-          iter = namesIters
-        )
-      )
-
-      if (!is.null(self$q)) { # don't try to calculate before any iterations have occured
-        for (i in 1:n_iter) {
-          for (times in 1:nTimes) {
-            for (locations in 1:nLocations) {
-              self$lambda_j[, times, locations, i] <- self$alpha[, times, locations, i] * colSums(self$r[, , times, i] * self$q[, i]) * k[, times]
-            }
-          }
-        }
-      } else {
-        self$lambda_j <- NULL
-      }
+      # tensorA implementation
+      k = as.tensor(k)
+      names(k) = c('source', 'time')
+      self$xi = self$alpha * mul.tensor(self$r, 'type', self$q, 'type', by =
+                                                'iter') * k
     },
-
-    calc_lambda_j_prop = function(n_iter,
+    calc_xi_prop = function(n_iter,
                                   nSources,
                                   nTimes,
                                   nLocations,
@@ -137,24 +133,21 @@ Posterior_HaldDP = R6::R6Class(
                                   namesLocations,
                                   namesIters,
                                   k) {
-      if (is.null(self$lambda_j)) self$calc_lambda_j(n_iter,
-                                                     nSources,
-                                                     nTimes,
-                                                     nLocations,
-                                                     namesSources,
-                                                     namesTimes,
-                                                     namesLocations,
-                                                     namesIters,
-                                                     k)
-      self$lambda_j_prop <- self$lambda_j
-      for (iter in 1:dim(self$lambda_j)[4]) {
-        for (times in 1:nTimes) {
-          for (locations in 1:nLocations) {
-            self$lambda_j_prop[,times,locations,iter] <-
-              self$lambda_j[,times,locations,iter] / sum(self$lambda_j[,times,locations,iter])
-          }
-        }
-      }
+      if (is.null(self$xi))
+        self$calc_xi(
+          n_iter,
+          nSources,
+          nTimes,
+          nLocations,
+          namesSources,
+          namesTimes,
+          namesLocations,
+          namesIters,
+          k
+        )
+      self$xi_prop = to.tensor(apply(self$xi, c('time', 'location', 'iter'), function(x)
+        x / sum(x)))
+      names(self$xi_prop)[1] = 'source'
     }
   )
 )

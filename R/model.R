@@ -66,15 +66,10 @@ DPModel_impl <- R6::R6Class(
     initialize = function(y, X, R, Time, Location, Sources, Type, prev, a_q, a_theta,
                           b_theta, a_r, a_alpha, s, theta, alpha)
     {
-      ## test y column is correct
-      # merge(data.frame(Human = y[, 1, 1], Type = dimnames(y)$type), data.frame(Human2 = campy$Human, Type = as.character(campy$Type)))
-      ## Test x column is correct
-      # merge(as.data.frame(cbind(X[,,1], Type = dimnames(X)$type)), campy[, c(2:7, 10)])
 
       self$qNodes <- DirichletProcessNode$new(theta = theta, s = s, alpha = a_q,
                                               base = dgamma, shape = a_theta,
                                               rate = b_theta, name = 'q')
-
       # Node lists
       self$alphaNodes <- list()
       self$yNodes <- list()

@@ -7,7 +7,16 @@
 # Purpose: Implements credible interval calculation #
 #####################################################
 #' @importFrom SPIn SPIn
+
+check_alphavalue_CI <- function(alpha) {
+  assertthat::assert_that(is.atomic(alpha),
+                        is.numeric(alpha),
+                        alpha >=0,
+                        alpha <= 1)
+}
+
 ci_chenShao = function(x, alpha) {
+  if (! check_alphavalue_CI(alpha)) stop("alpha is not a single positive numeric value between 0 and 1.")
   n <- length(x)
   sorted <- sort(x)
 
@@ -28,14 +37,15 @@ ci_chenShao = function(x, alpha) {
   }
 
   return(c(
-    median = stats::median(sorted),
     lower = ci.lower,
+    median = stats::median(sorted),
     upper = ci.upper
   ))
 }
 
 
 ci_percentiles <- function(x, alpha) {
+  if (! check_alphavalue_CI(alpha)) stop("alpha is not a single positive numeric value between 0 and 1.")
   n <- length(x)
   sorted <- sort(x)
 
@@ -43,14 +53,15 @@ ci_percentiles <- function(x, alpha) {
   lower_pos <- round(n * (alpha / 2))
 
   return(c(
-    median = stats::median(x),
     lower = sorted[lower_pos],
+    median = stats::median(x),
     upper = sorted[upper_pos]
   ))
 }
 
 
 ci_SPIn <- function(x, alpha) {
+  if (! check_alphavalue_CI(alpha)) stop("alpha is not a single positive numeric value between 0 and 1.")
   region <- tryCatch({
     SPIn::SPIn(x, conf = 1 - alpha)$spin
   },
@@ -59,8 +70,8 @@ ci_SPIn <- function(x, alpha) {
     return(c(NA, NA))
   })
   return(c(
-    median = stats::median(x),
     lower = region[1],
+    median = stats::median(x),
     upper = region[2]
   ))
 }

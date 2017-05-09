@@ -31,7 +31,7 @@ to use the correct update algorithm for the appropriate nodes.
   \item{\code{update()}}{when called, updates \code{node}}
 }
 }
+
 \keyword{DAG}
 \keyword{Dirichlet-process}
 \keyword{node}
-

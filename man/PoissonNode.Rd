@@ -23,6 +23,6 @@ Derived from \link{StochasticNode}, please see base class documentation.
   \item{\code{new(data, lambda, offset)}}{create a PoissonNode, with mean \link{Node} \code{lambda}, and offset \link{Node} \code{offset}.}
   }
 }
+
 \keyword{DAG}
 \keyword{node}
-

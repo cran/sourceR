@@ -312,40 +312,6 @@ DirichletNode2 <- R6::R6Class(
   )
 )
 
-#' Transformed Dirichlet node
-#'
-#' Uses transformation due to Betancourt 2013
-#' https://arxiv.org/pdf/1010.3436v4.pdf
-#'
-#' Experimental -- do not use.
-# DirichletTransformNode <- R6::R6Class(
-#   "DirichletTransformNode",
-#   inherit = StochasticNode,
-#   public = list(
-#     m = NA,
-#     alphatilde = function() {
-#       alpha <- self$parents[[1]]$getData()
-#       cumsum(rev(alpha)) - alpha
-#     },
-#     initialize = function(children = list(), parents = list()) {
-#       self$m = length(parents[[1]]$getData())
-#       self$children = children
-#       self$parents = parents
-#       self$data = rbeta(self$m, self$alphatilde(), self$parents[[1]]$getData()) # Start sample from prior
-#     },
-#     getDensity = function() {
-#       fx = dbeta(self$data, self$alphatilde(), self$parents[[1]]$getData())
-#       cumprod(fx[-self$m])
-#     },
-#     getData = function() { # Gets original Dirichlet variates
-#       a = c(1 - self$data[-self$m],1)
-#       b = c(1,cumprod(self$data[-self$m]))
-#       a*b
-#     }
-#   )
-# )
-
-
 
 #' DirichletProcessNode
 #'
@@ -379,13 +345,16 @@ DirichletProcessNode <- R6::R6Class( # TODO: Make this accept a generic base dis
     conc = NA,
     baseShape = NA,
     baseRate = NA,
+    idBucket = NA,
     initialize = function(theta, s, alpha, base, shape, rate, name) {
       super$initialize(name = name)
       self$conc <- alpha
       self$base <- dgamma
       self$baseShape <- shape
       self$baseRate <- rate
-      h = replicate(length(theta),uuid::UUIDgenerate())
+      self$idBucket <- queue()
+      for(i in 1:length(s)) enqueue(self$idBucket, as.character(i))
+      h = replicate(length(theta), dequeue(self$idBucket))
       self$theta <- hashmap::hashmap(h, theta)
       self$s <- h[s]
     },
