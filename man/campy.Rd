@@ -4,7 +4,8 @@
 \name{campy}
 \alias{campy}
 \title{Human cases of campylobacteriosis and numbers of source samples positive for \emph{Campylobacter}.}
-\format{A list containing the human cases (`cases'), source samples (`sources'0 and, prevalences (`prev').
+\format{
+A list containing the human cases (`cases'), source samples (`sources'0 and, prevalences (`prev').
 
 \strong{cases:} data frame with 91 rows and 2 variables:
 \describe{
@@ -26,7 +27,8 @@
   \item{Source}{Source id for the samples}
   \item{n_positive}{number of positive source samples for campylobacter (PCR)}
   \item{n_total}{total number of source samples tested for campylobacter}
-}}
+}
+}
 \usage{
 campy
 }

@@ -354,14 +354,14 @@ DirichletProcessNode <- R6::R6Class( # TODO: Make this accept a generic base dis
       self$baseRate <- rate
       self$idBucket <- queue()
       for(i in 1:length(s)) enqueue(self$idBucket, as.character(i))
-      h = replicate(length(theta), dequeue(self$idBucket))
-      self$theta <- hashmap::hashmap(h, theta)
-      self$s <- h[s]
+      keys = replicate(length(theta), dequeue(self$idBucket))
+      self$theta <- HashTable(keys, theta)
+      self$s <- keys[s]
     },
     getData = function()
       self$theta$find(self$s),
     getDensity = function(i)
-      sum(self$base(self$theta[self$s[i]],shape=self$baseShape, rate=self$baseRate ,log = T))
+      sum(self$base(self$theta$find(self$s[i]),shape=self$baseShape, rate=self$baseRate ,log = T))
   )
 )
 

@@ -4,9 +4,8 @@
 \name{FormulaNode}
 \alias{FormulaNode}
 \title{FormulaNode}
-\format{Object of \code{\link{R6Class}} with methods for constructing a DAG.}
-\usage{
-FormulaNode
+\format{
+Object of \code{\link{R6Class}} with methods for constructing a DAG.
 }
 \value{
 Object of \code{\link{FormulaNode}}

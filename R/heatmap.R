@@ -27,12 +27,8 @@ clusterHeatMap <- function(object, cols, xnames = 1:length(object), hclust_metho
     cols <- c("blue", "white")
   }
 
-  groups <-
-    as.data.frame(apply(object, 2, function(x)
-      as.factor(x)))
-
   # compute dissimilarity matrix for the type effect clusters
-  disim_clust_g <- cluster::daisy(groups)
+  disim_clust_g <- cluster::daisy(object)
   clu <-
     stats::hclust(disim_clust_g, hclust_method) # default method is complete
   dend <- stats::as.dendrogram(clu)

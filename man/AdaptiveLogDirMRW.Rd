@@ -4,9 +4,8 @@
 \name{AdaptiveLogDirMRW}
 \alias{AdaptiveLogDirMRW}
 \title{AdaptiveLogDirMRW}
-\format{Object of \code{\link{R6Class}} with methods for updating a \link{DirichletNode} instance.}
-\usage{
-AdaptiveLogDirMRW
+\format{
+Object of \code{\link{R6Class}} with methods for updating a \link{DirichletNode} instance.
 }
 \value{
 Object of \code{\link{AdaptiveLogDirMRW}}

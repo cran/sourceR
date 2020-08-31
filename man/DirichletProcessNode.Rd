@@ -4,9 +4,8 @@
 \name{DirichletProcessNode}
 \alias{DirichletProcessNode}
 \title{DirichletProcessNode}
-\format{Object of \code{\link{R6Class}} with methods for constructing a DAG.}
-\usage{
-DirichletProcessNode
+\format{
+Object of \code{\link{R6Class}} with methods for constructing a DAG.
 }
 \value{
 Object of \code{\link{DirichletProcessNode}}

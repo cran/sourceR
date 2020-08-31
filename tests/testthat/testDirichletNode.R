@@ -47,5 +47,5 @@ test_that("AdaptiveLogDirMRW", {
                0.02, 0.02, 0.06), tolerance=0.02)
   expect_equal(vars, c(0.0031, 0.0017,
                0.0027, 0.00015, 0.0002,
-               0.00071), tolerance=1e-3)
+               0.00071), tolerance=1e-2)
 })

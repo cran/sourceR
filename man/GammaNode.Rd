@@ -4,9 +4,8 @@
 \name{GammaNode}
 \alias{GammaNode}
 \title{GammaNode}
-\format{Object of \code{\link{R6Class}} with methods for constructing a DAG.}
-\usage{
-GammaNode
+\format{
+Object of \code{\link{R6Class}} with methods for constructing a DAG.
 }
 \value{
 Object of \code{\link{GammaNode}}

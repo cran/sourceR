@@ -4,9 +4,8 @@
 \name{PoissonNode}
 \alias{PoissonNode}
 \title{PoissonNode}
-\format{Object of \code{\link{R6Class}} with methods for constructing a DAG.}
-\usage{
-PoissonNode
+\format{
+Object of \code{\link{R6Class}} with methods for constructing a DAG.
 }
 \value{
 Object of \code{\link{PoissonNode}}

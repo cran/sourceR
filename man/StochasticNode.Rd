@@ -4,9 +4,8 @@
 \name{StochasticNode}
 \alias{StochasticNode}
 \title{StochasticNode}
-\format{Object of \code{\link{R6Class}} with methods for constructing a DAG.}
-\usage{
-StochasticNode
+\format{
+Object of \code{\link{R6Class}} with methods for constructing a DAG.
 }
 \value{
 Object of \code{\link{StochasticNode}}

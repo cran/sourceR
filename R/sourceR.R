@@ -7,4 +7,5 @@
 #' The main sourceR method is \code{\link{HaldDP}}.
 #' @docType package
 #' @name sourceR
+#' @useDynLib sourceR
 NULL

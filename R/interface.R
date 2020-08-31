@@ -203,7 +203,7 @@
 #' @author Chris Jewell and Poppy Miller \email{p.miller at lancaster.ac.uk}
 #'
 #' @examples
-#' \dontrun{
+#'
 #' #### Format data using Y, X, and Prev functions #############################
 #' ## Input data must be in long format
 #' y <- Y(                      # Cases
@@ -290,41 +290,44 @@
 #' my_model <- HaldDP(y = y, x = x, k = k, priors = priors, inits = inits, a_q = 0.1)
 #'
 #' #### Set mcmc parameters ####################################################
-#' my_model$mcmc_params(n_iter = 30, burn_in = 2, thin = 1)
+#' my_model$mcmc_params(n_iter = 2, burn_in = 2, thin = 1)
 #'
 #' #### Update model ###########################################################
 #' my_model$update()
 #' ## Add an additional 10 iterations
-#' my_model$update(n_iter = 10, append = TRUE)
+#' my_model$update(n_iter = 2, append = TRUE)
 #'
 #' #### Extract posterior ######################################################
 #' ## returns the posterior for the r, alpha, q, c,
 #' ## lambda_i, xi and xi_prop parameters,
 #' ## for all times, locations, sources and types
 #' ## the posterior is returned as a list or arrays
-#' my_model$extract()
+#' \dontrun{str(my_model$extract())}
 #'
 #' ## returns the posterior for the r and alpha parameters,
 #' ## for time 1, location B, sources Source3, and Source4,
 #' ## types 5, 25, and 50, and iterations 200:300
 #' ## the posterior is returned as a list of dataframes
-#' my_model$extract(params = c("r", "alpha"),
+#' \dontrun{
+#' str(my_model$extract(params = c("r", "alpha"),
 #'                  times = "1", location = "B",
 #'                  sources = c("Source3", "Source4"),
 #'                  types = c("5", "25", "50"),
-#'                  iters = 20:30,
-#'                  flatten = TRUE)
+#'                  iters = 5:15,
+#'                  flatten = TRUE))
+#' }
 #'
 #' #### Calculate medians and credible intervals ###############################
-#' my_model$summary(alpha = 0.05, CI_type = "percentiles")
+#' \dontrun{my_model$summary(alpha = 0.05, CI_type = "chen-shao")}
 #' ## subsetting is done in the same way as extract()
-#' my_model$summary(alpha = 0.05, CI_type = "chen-shao",
+#' \dontrun{my_model$summary(alpha = 0.05, CI_type = "chen-shao",
 #'                  params = c("r", "alpha"),
 #'                  times = "1", location = "B",
 #'                  sources = c("Source3", "Source4"),
 #'                  types = c("5", "25", "50"),
-#'                  iters = 20:30,
+#'                  iters = 5:15,
 #'                  flatten = TRUE)
+#' }
 #'
 #' #### Plot heatmap and dendrogram of the type effect grouping ################
 #' my_model$plot_heatmap()
@@ -337,7 +340,7 @@
 #' my_model$get_acceptance()
 #' my_model$get_mcmc_params()
 #'
-#'}
+#'
 #'
 
 HaldDP = function(y, x, k, priors, a_q, inits = NULL)
@@ -1170,7 +1173,7 @@ HaldDP_ <- R6::R6Class(
       }
 
       # Draw the heatmap
-      groups <- as.data.frame(private$posterior$s[, iters])
+      groups <- as.data.frame(private$posterior$s[, iters], stringsAsFactors = T)
       clusterHeatMap(groups, cols, rownames(private$posterior$q), hclust_method)
     },
     summary = function(alpha = 0.05,

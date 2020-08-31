@@ -4,9 +4,8 @@
 \name{PoisGammaDPUpdate}
 \alias{PoisGammaDPUpdate}
 \title{PoisGammaDPUpdate}
-\format{Object of \code{\link{R6Class}} with methods for updating a \link{DirichletProcessNode} instance.}
-\usage{
-PoisGammaDPUpdate
+\format{
+Object of \code{\link{R6Class}} with methods for updating a \link{DirichletProcessNode} instance.
 }
 \value{
 Object of \code{\link{PoisGammaDPUpdate}}

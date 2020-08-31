@@ -515,7 +515,7 @@ PoisGammaDPUpdate <- R6::R6Class(
           names(nk_local) <- names(nk)
           nk_local[self$node$s[i]] <- nk_local[self$node$s[i]] - 1
 
-          theta <- self$node$theta$values()
+          theta <- self$node$theta$find(names(nk))
 
           logpi <- log(nk_local) + y[i] * log(theta) - theta * aX[i]
           logpiplus <- log(self$node$conc) +
@@ -554,13 +554,11 @@ PoisGammaDPUpdate <- R6::R6Class(
             self$node$theta$erase(s_old)
             enqueue(self$node$idBucket, s_old)
             nk <- nk[names(nk) != s_old]
-            if (any(is.na(nk)))
-              browser()
           }
           nk[self$node$s[i]] <- nk[self$node$s[i]] + 1
         }
 
-        # Update theta
+        # Sample theta from the conditional posterior
         for (label in self$node$theta$keys())
         {
           sumy <- sum(y[self$node$s == label])

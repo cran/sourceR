@@ -4,7 +4,8 @@
 \name{sim_SA}
 \alias{sim_SA}
 \title{Simulated data: Human cases of campylobacteriosis and numbers of source samples positive for \emph{Campylobacter}.}
-\format{A list containing the human cases (`cases'), source samples (`sources'), prevalences (`prev') and true values (`truevals').
+\format{
+A list containing the human cases (`cases'), source samples (`sources'), prevalences (`prev') and true values (`truevals').
 
 \strong{cases:} data frame with 364 rows and 4 variables:
 \describe{
@@ -41,7 +42,8 @@
   Time, Location and Source contain the time, location and source id's respectively.}
   \item{r}{A dataframe with 2184 rows and 5 variables: Value contains the true r values,
   Time, Type, Location and Source contain the time, type, location and source id's respectively.}
-}}
+}
+}
 \usage{
 sim_SA
 }

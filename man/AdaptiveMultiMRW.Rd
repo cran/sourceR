@@ -4,9 +4,8 @@
 \name{AdaptiveMultiMRW}
 \alias{AdaptiveMultiMRW}
 \title{AdaptiveMultiMRW}
-\format{Object of \code{\link{R6Class}} with methods for updating a \link{Node} instance.}
-\usage{
-AdaptiveMultiMRW
+\format{
+Object of \code{\link{R6Class}} with methods for updating a \link{Node} instance.
 }
 \value{
 Object of \code{\link{AdaptiveMultiMRW}}

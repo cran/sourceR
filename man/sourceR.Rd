@@ -3,7 +3,6 @@
 \docType{package}
 \name{sourceR}
 \alias{sourceR}
-\alias{sourceR-package}
 \title{sourceR: A package for fitting Bayesian non-parametric source attribution models.}
 \description{
 The sourceR package currently provides an S6 class called HaldDP to fit the HaldDP model.
